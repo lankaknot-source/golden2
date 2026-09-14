@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- App එකේ Cache ෆෝල්ඩර් එකේ ඇති ඕනෑම ෆයිල් එකක් Share කිරීමට අවසර දීම -->
+    <cache-path name="app_cache" path="." />
+
+    <!-- අමතර ආරක්ෂාවක් ලෙස අනෙකුත් ෆෝල්ඩර් සඳහාද අවසර දීම -->
+    <files-path name="app_files" path="." />
+    <external-cache-path name="external_cache" path="." />
+</paths>

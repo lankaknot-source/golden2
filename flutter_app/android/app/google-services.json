@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "283184840115",
+    "project_id": "care-2a20d",
+    "storage_bucket": "care-2a20d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:283184840115:android:3ba51ec94fc905bc461fc6",
+        "android_client_info": {
+          "package_name": "com.kina.care"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "283184840115-rerctfckjkoheht4i4c5g57gkjpvf48v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kina.care",
+            "certificate_hash": "f5a05170765ae75833fd16ed5b8dacbb834c50aa"
+          }
+        },
+        {
+          "client_id": "283184840115-dh6l2j6f0u3ov03nih26slfi4i832ev6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_lx2VlsU4cCb0O6S70BYvdLAvDegcrZ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "283184840115-dh6l2j6f0u3ov03nih26slfi4i832ev6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- පරණ Material Components ඉවත් කර සරල Theme එකක් යොදා ඇත -->
+    <style name="Theme.KinaCare" parent="android:Theme.DeviceDefault.Light.NoActionBar">
+        <item name="android:colorPrimary">@color/logo_green</item>
+        <item name="android:colorPrimaryDark">@color/dark_blue</item>
+        <item name="android:colorAccent">@color/logo_green</item>
+    </style>
+</resources>
