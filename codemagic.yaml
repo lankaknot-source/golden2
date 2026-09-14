@@ -6,31 +6,39 @@ workflows:
     working_directory: flutter_app
 
     environment:
-      flutter: stable
+      flutter: 3.41.2
       xcode: 16.2
-      cocoapods: default
+      cocoapods: 1.16.2
 
     scripts:
       - name: Install Flutter dependencies
         script: |
+          set -euo pipefail
           flutter config --no-enable-swift-package-manager
-          flutter pub get
+          flutter pub get --enforce-lockfile
+
+      - name: Validate Flutter project
+        script: |
+          set -euo pipefail
+          flutter analyze --no-pub --no-fatal-infos
+          flutter test --no-pub
+          python3 -B -m unittest discover -s tool -p 'test_*.py'
+          python3 tool/check_ios_configuration.py
 
       - name: Patch legacy Firebase iOS headers
         script: |
+          set -euo pipefail
           python3 tool/patch_firebase_ios.py
 
       - name: Install CocoaPods dependencies
         script: |
+          set -euo pipefail
           cd ios
           pod install --repo-update
 
-      - name: Analyze Flutter project
-        script: |
-          flutter analyze || true
-
       - name: Build iOS without code signing
         script: |
+          set -euo pipefail
           flutter build ios \
             --release \
             --no-codesign \
@@ -38,6 +46,7 @@ workflows:
 
     artifacts:
       - flutter_app/build/ios/iphoneos/Runner.app
+      - flutter_app/ios/Podfile.lock
       - /tmp/xcodebuild_logs/*.log
 
   ios-appstore:
@@ -53,37 +62,52 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.kina.care
-      flutter: stable
+      flutter: 3.41.2
       xcode: 16.2
-      cocoapods: default
+      cocoapods: 1.16.2
 
     scripts:
       - name: Install Flutter dependencies
         script: |
+          set -euo pipefail
           flutter config --no-enable-swift-package-manager
-          flutter pub get
+          flutter pub get --enforce-lockfile
+
+      - name: Validate Flutter project
+        script: |
+          set -euo pipefail
+          flutter analyze --no-pub --no-fatal-infos
+          flutter test --no-pub
+          python3 -B -m unittest discover -s tool -p 'test_*.py'
+          python3 tool/check_ios_configuration.py
 
       - name: Patch legacy Firebase iOS headers
         script: |
+          set -euo pipefail
           python3 tool/patch_firebase_ios.py
 
       - name: Set release bundle identifier
         script: |
+          set -euo pipefail
           sed -i '' -E \
             's/com\.kina\.[A-Za-z0-9_-]+/com.kina.care/g' \
             ios/Runner.xcodeproj/project.pbxproj
+          python3 tool/check_ios_configuration.py
 
       - name: Install CocoaPods dependencies
         script: |
+          set -euo pipefail
           cd ios
           pod install --repo-update
 
       - name: Configure automatic code signing
         script: |
+          set -euo pipefail
           xcode-project use-profiles
 
       - name: Build signed IPA
         script: |
+          set -euo pipefail
           flutter build ipa \
             --release \
             --build-number="$BUILD_NUMBER" \
@@ -92,6 +116,7 @@ workflows:
     artifacts:
       - flutter_app/build/ios/ipa/*.ipa
       - flutter_app/build/ios/archive/*.xcarchive
+      - flutter_app/ios/Podfile.lock
       - /tmp/xcodebuild_logs/*.log
 
     publishing:
