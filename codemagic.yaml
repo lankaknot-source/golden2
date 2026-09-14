@@ -3,6 +3,7 @@ workflows:
     name: iOS Test Build (unsigned, free)
     instance_type: mac_mini_m2
     max_build_duration: 60
+    working_directory: flutter_app
 
     environment:
       flutter: stable
@@ -52,13 +53,14 @@ workflows:
             --build-number="$BUILD_NUMBER"
 
     artifacts:
-      - build/ios/iphoneos/Runner.app
+      - flutter_app/build/ios/iphoneos/Runner.app
       - /tmp/xcodebuild_logs/*.log
 
   ios-appstore:
     name: iOS App Store (signed, TestFlight)
     instance_type: mac_mini_m2
     max_build_duration: 120
+    working_directory: flutter_app
 
     integrations:
       app_store_connect: CodemagicAppStoreConnect
@@ -120,8 +122,8 @@ workflows:
             --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
-      - build/ios/ipa/*.ipa
-      - build/ios/archive/*.xcarchive
+      - flutter_app/build/ios/ipa/*.ipa
+      - flutter_app/build/ios/archive/*.xcarchive
       - /tmp/xcodebuild_logs/*.log
 
     publishing:
