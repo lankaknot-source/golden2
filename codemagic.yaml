@@ -18,23 +18,7 @@ workflows:
 
       - name: Patch legacy Firebase iOS headers
         script: |
-          while IFS= read -r -d '' file; do
-            sed -i '' \
-              's|#import <Firebase/Firebase.h>|#import <FirebaseDatabase/FirebaseDatabase.h>|g' \
-              "$file"
-          done < <(find "$HOME/.pub-cache/hosted/pub.dev" \
-            -path "*/firebase_database-*/ios/Classes/*" \
-            -type f \( -name "*.h" -o -name "*.m" \) \
-            -print0)
-
-          while IFS= read -r -d '' file; do
-            sed -i '' \
-              's|#import <Firebase/Firebase.h>|#import <FirebaseMessaging/FirebaseMessaging.h>|g' \
-              "$file"
-          done < <(find "$HOME/.pub-cache/hosted/pub.dev" \
-            -path "*/firebase_messaging-*/ios/Classes/*" \
-            -type f \( -name "*.h" -o -name "*.m" \) \
-            -print0)
+          python3 tool/patch_firebase_ios.py
 
       - name: Install CocoaPods dependencies
         script: |
@@ -81,23 +65,7 @@ workflows:
 
       - name: Patch legacy Firebase iOS headers
         script: |
-          while IFS= read -r -d '' file; do
-            sed -i '' \
-              's|#import <Firebase/Firebase.h>|#import <FirebaseDatabase/FirebaseDatabase.h>|g' \
-              "$file"
-          done < <(find "$HOME/.pub-cache/hosted/pub.dev" \
-            -path "*/firebase_database-*/ios/Classes/*" \
-            -type f \( -name "*.h" -o -name "*.m" \) \
-            -print0)
-
-          while IFS= read -r -d '' file; do
-            sed -i '' \
-              's|#import <Firebase/Firebase.h>|#import <FirebaseMessaging/FirebaseMessaging.h>|g' \
-              "$file"
-          done < <(find "$HOME/.pub-cache/hosted/pub.dev" \
-            -path "*/firebase_messaging-*/ios/Classes/*" \
-            -type f \( -name "*.h" -o -name "*.m" \) \
-            -print0)
+          python3 tool/patch_firebase_ios.py
 
       - name: Set release bundle identifier
         script: |
