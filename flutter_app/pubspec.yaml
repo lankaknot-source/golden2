@@ -71,6 +71,9 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  # These plugin versions use CocoaPods for their native iOS dependencies.
+  config:
+    enable-swift-package-manager: false
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -112,4 +115,3 @@ flutter:
 
 dependency_overrides:
   google_sign_in_ios: 5.5.0
-
