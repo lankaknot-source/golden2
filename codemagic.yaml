@@ -1,0 +1,131 @@
+workflows:
+  ios-test-unsigned:
+    name: iOS Test Build (unsigned, free)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    environment:
+      flutter: stable
+      xcode: 16.2
+      cocoapods: default
+
+    scripts:
+      - name: Install Flutter dependencies
+        script: |
+          flutter config --no-enable-swift-package-manager
+          flutter pub get
+
+      - name: Patch legacy Firebase iOS headers
+        script: |
+          while IFS= read -r -d '' file; do
+            sed -i '' \
+              's|#import <Firebase/Firebase.h>|#import <FirebaseDatabase/FirebaseDatabase.h>|g' \
+              "$file"
+          done < <(find "$HOME/.pub-cache/hosted/pub.dev" \
+            -path "*/firebase_database-*/ios/Classes/*" \
+            -type f \( -name "*.h" -o -name "*.m" \) \
+            -print0)
+
+          while IFS= read -r -d '' file; do
+            sed -i '' \
+              's|#import <Firebase/Firebase.h>|#import <FirebaseMessaging/FirebaseMessaging.h>|g' \
+              "$file"
+          done < <(find "$HOME/.pub-cache/hosted/pub.dev" \
+            -path "*/firebase_messaging-*/ios/Classes/*" \
+            -type f \( -name "*.h" -o -name "*.m" \) \
+            -print0)
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install --repo-update
+
+      - name: Analyze Flutter project
+        script: |
+          flutter analyze || true
+
+      - name: Build iOS without code signing
+        script: |
+          flutter build ios \
+            --release \
+            --no-codesign \
+            --build-number="$BUILD_NUMBER"
+
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+      - /tmp/xcodebuild_logs/*.log
+
+  ios-appstore:
+    name: iOS App Store (signed, TestFlight)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+
+    integrations:
+      app_store_connect: CodemagicAppStoreConnect
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.kina.care
+      flutter: stable
+      xcode: 16.2
+      cocoapods: default
+
+    scripts:
+      - name: Install Flutter dependencies
+        script: |
+          flutter config --no-enable-swift-package-manager
+          flutter pub get
+
+      - name: Patch legacy Firebase iOS headers
+        script: |
+          while IFS= read -r -d '' file; do
+            sed -i '' \
+              's|#import <Firebase/Firebase.h>|#import <FirebaseDatabase/FirebaseDatabase.h>|g' \
+              "$file"
+          done < <(find "$HOME/.pub-cache/hosted/pub.dev" \
+            -path "*/firebase_database-*/ios/Classes/*" \
+            -type f \( -name "*.h" -o -name "*.m" \) \
+            -print0)
+
+          while IFS= read -r -d '' file; do
+            sed -i '' \
+              's|#import <Firebase/Firebase.h>|#import <FirebaseMessaging/FirebaseMessaging.h>|g' \
+              "$file"
+          done < <(find "$HOME/.pub-cache/hosted/pub.dev" \
+            -path "*/firebase_messaging-*/ios/Classes/*" \
+            -type f \( -name "*.h" -o -name "*.m" \) \
+            -print0)
+
+      - name: Set release bundle identifier
+        script: |
+          sed -i '' -E \
+            's/com\.kina\.[A-Za-z0-9_-]+/com.kina.care/g' \
+            ios/Runner.xcodeproj/project.pbxproj
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install --repo-update
+
+      - name: Configure automatic code signing
+        script: |
+          xcode-project use-profiles
+
+      - name: Build signed IPA
+        script: |
+          flutter build ipa \
+            --release \
+            --build-number="$BUILD_NUMBER" \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
