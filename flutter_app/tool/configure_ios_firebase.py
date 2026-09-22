@@ -4,39 +4,56 @@ from pathlib import Path
 
 
 def configure_ios_firebase():
-    """Ensure FlutterFire uses static frameworks."""
+    """Configure the iOS Podfile for Firebase static frameworks."""
 
     project_root = Path(__file__).resolve().parent.parent
     podfile = project_root / "ios" / "Podfile"
 
     if not podfile.exists():
-        print("ERROR: ios/Podfile was not found.")
-        return
+        raise FileNotFoundError(f"Podfile not found: {podfile}")
 
     content = podfile.read_text(encoding="utf-8")
 
-    # Remove previous versions of this setting.
+    # Remove settings previously inserted by this script.
     lines = content.splitlines()
 
-    filtered_lines = []
+    filtered = []
     for line in lines:
-        if "use_frameworks!" in line:
+        stripped = line.strip()
+
+        if stripped.startswith("use_frameworks!"):
             continue
-        filtered_lines.append(line)
 
-    content = "\n".join(filtered_lines)
+        if stripped == "use_modular_headers!":
+            continue
 
-    # Add static framework configuration.
+        if "CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES" in line:
+            continue
+
+        if "DEFINES_MODULE" in line:
+            continue
+
+        filtered.append(line)
+
+    content = "\n".join(filtered).rstrip() + "\n"
+
     firebase_settings = """use_frameworks! :linkage => :static
-$RNFirebaseAsStaticFramework = true
+use_modular_headers!
+
+$firebase_ios_build_settings = {
+  'CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES' => 'YES',
+  'DEFINES_MODULE' => 'YES',
+}
+
 """
 
-    content = firebase_settings + "\n" + content.lstrip()
-
-    podfile.write_text(content, encoding="utf-8")
+    podfile.write_text(
+        firebase_settings + content,
+        encoding="utf-8",
+    )
 
     print("iOS Firebase build settings configured successfully.")
-    print("Updated:", podfile)
+    print(f"Updated: {podfile}")
 
 
 if __name__ == "__main__":
