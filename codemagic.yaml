@@ -37,6 +37,11 @@ workflows:
           cd ios
           pod install --repo-update
 
+      - name: Patch gRPC for modern Xcode
+        script: |
+          set -euo pipefail
+          python3 tool/patch_grpc_ios.py
+
       - name: Build iOS without code signing
         script: |
           set -euo pipefail
@@ -95,6 +100,11 @@ workflows:
           set -euo pipefail
           cd ios
           pod install --repo-update
+
+      - name: Patch gRPC for modern Xcode
+        script: |
+          set -euo pipefail
+          python3 tool/patch_grpc_ios.py
 
       - name: Configure automatic code signing
         script: |
