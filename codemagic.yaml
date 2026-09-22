@@ -10,9 +10,22 @@ workflows:
       cocoapods: 1.16.2
 
     scripts:
-      - name: Install Flutter dependencies
+            - name: Install Flutter dependencies
         script: |
           set -e
+          echo "=== CURRENT DIRECTORY ==="
+          pwd
+          echo "=== FILES IN CURRENT DIRECTORY ==="
+          ls -la
+          echo "=== SEARCHING FOR PUBSPEC ==="
+          find .. -maxdepth 3 -name pubspec.yaml -print
+          
+          cd "$CM_BUILD_DIR"
+          
+          echo "=== PROJECT DIRECTORY ==="
+          pwd
+          ls -la
+          
           flutter config --no-enable-swift-package-manager
           flutter pub get
 
