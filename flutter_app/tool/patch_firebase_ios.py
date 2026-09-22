@@ -33,7 +33,10 @@ AUTH_IMPORT = """#if __has_include(<FirebaseAuth/FirebaseAuth.h>)
 def patch_package(package_root, module):
     classes = package_root / "ios" / "Classes"
     if not classes.is_dir():
-        raise RuntimeError(f"Legacy iOS sources not found: {classes}")
+        # Newer FlutterFire plugins may not ship legacy Objective-C sources
+        # under ios/Classes. There is nothing to rewrite in that case.
+        print(f"Skipping Firebase plugin without legacy iOS sources: {classes}")
+        return
 
     for source in sorted(classes.rglob("*")):
         if source.suffix not in (".h", ".m", ".mm"):

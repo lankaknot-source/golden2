@@ -72,10 +72,10 @@ class FirebaseHeaderPatchTest(unittest.TestCase):
                 patch_package(root, module)
                 self.assertEqual(first, [source.read_bytes() for source in sources])
 
-    def test_missing_legacy_sources_fail_early(self):
+    def test_missing_legacy_sources_are_skipped(self):
         with tempfile.TemporaryDirectory() as tmp:
-            with self.assertRaisesRegex(RuntimeError, "Legacy iOS sources not found"):
-                patch_package(Path(tmp), "FirebaseMessaging")
+            # Modern FlutterFire plugins can omit the legacy ios/Classes tree.
+            patch_package(Path(tmp), "FirebaseMessaging")
 
 
 if __name__ == "__main__":
