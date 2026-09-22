@@ -1,170 +1,311 @@
 workflows:
-  ios-test-unsigned:
-    name: iOS Test Build
-    instance_type: mac_mini_m2
-    max_build_duration: 60
-    environment:
-      flutter: 3.41.2
-      xcode: 16.2
-      cocoapods: 1.16.2
-    scripts:
-      
+ios-test-unsigned:
+name: iOS Test Build
+instance_type: mac_mini_m2
+max_build_duration: 60
+
+environment:
+  flutter: 3.41.2
+  xcode: 16.2
+  cocoapods: 1.16.2
+
+scripts:
   - name: Install Flutter dependencies
     script: |
       set -e
 
-      echo "=== BUILD DIRECTORY ==="
+      echo "=== CURRENT DIRECTORY ==="
       pwd
-      echo "CM_BUILD_DIR=$CM_BUILD_DIR"
+
+      echo "=== CM_BUILD_DIR ==="
+      echo "$CM_BUILD_DIR"
 
       echo "=== SEARCHING FOR PUBSPEC.YAML ==="
-      find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
 
-      PROJECT_DIR=$(dirname "$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)")
-
-      if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/pubspec.yaml" ]; then
+      if [ -z "$PUBSPEC_PATH" ]; then
         echo "ERROR: pubspec.yaml was not found."
+        echo "Searching current workspace..."
+        find . -name pubspec.yaml -type f -print
         exit 1
       fi
 
-      echo "=== FLUTTER PROJECT FOUND ==="
+      echo "=== PUBSPEC FOUND ==="
+      echo "$PUBSPEC_PATH"
+
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      echo "=== FLUTTER PROJECT ROOT ==="
       echo "$PROJECT_DIR"
 
       cd "$PROJECT_DIR"
 
-      echo "=== PROJECT ROOT ==="
+      echo "=== PROJECT ROOT CHECK ==="
       pwd
-
-      ls -la
+      test -f pubspec.yaml
 
       flutter config --no-enable-swift-package-manager
       flutter pub get
 
-      - name: Analyze Flutter project
-        script: |
-          set -e
-          flutter analyze --no-pub --no-fatal-infos
+  - name: Analyze Flutter project
+    script: |
+      set -e
 
-      - name: Run Flutter tests
-        script: |
-          set -e
-          flutter test --no-pub
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
 
-      - name: Run Python tests
-        script: |
-          set -e
-          if [ -d "tool" ]; then
-            python3 -m unittest discover -s tool -p "test_*.py"
-          fi
+      cd "$PROJECT_DIR"
 
-      - name: Patch Firebase iOS packages
-        script: |
-          set -e
-          python3 tool/patch_firebase_ios.py
+      flutter analyze --no-pub --no-fatal-infos
 
-      - name: Verify iOS Firebase configuration
-        script: |
-          set -e
-          python3 tool/configure_ios_firebase.py
+  - name: Run Flutter tests
+    script: |
+      set -e
 
-      - name: Verify iOS project configuration
-        script: |
-          set -e
-          test -f ios/Podfile
-          grep -q "platform :ios, '15.0'" ios/Podfile
-          grep -q "use_frameworks! :linkage => :static" ios/Podfile
-          grep -q "use_modular_headers!" ios/Podfile
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
 
-      - name: Install CocoaPods dependencies
-        script: |
-          set -e
-          cd ios
-          pod deintegrate
-          pod install --repo-update
-          cd ..
+      cd "$PROJECT_DIR"
 
-      - name: Build iOS unsigned
-        script: |
-          set -e
-          flutter build ios --release --no-codesign --build-number="${BUILD_NUMBER:-1}"
+      flutter test --no-pub
 
-    artifacts:
-      - build/ios/iphoneos/*.app
+  - name: Run Python tests
+    script: |
+      set -e
 
-  ios-appstore:
-    name: iOS App Store Build
-    instance_type: mac_mini_m2
-    max_build_duration: 60
-    environment:
-      flutter: 3.41.2
-      xcode: 16.2
-      cocoapods: 1.16.2
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.kina.care
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
 
-    scripts:
-      - name: Install Flutter dependencies
-        script: |
-          set -e
-          cd "$CM_BUILD_DIR"
-          flutter config --no-enable-swift-package-manager
-          flutter pub get
+      cd "$PROJECT_DIR"
 
-      - name: Analyze Flutter project
-        script: |
-          set -e
-          flutter analyze --no-pub --no-fatal-infos
+      if [ -d "tool" ]; then
+        python3 -m unittest discover -s tool -p "test_*.py"
+      fi
 
-      - name: Run Flutter tests
-        script: |
-          set -e
-          flutter test --no-pub
+  - name: Patch Firebase iOS packages
+    script: |
+      set -e
 
-      - name: Run Python tests
-        script: |
-          set -e
-          if [ -d "tool" ]; then
-            python3 -m unittest discover -s tool -p "test_*.py"
-          fi
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
 
-      - name: Patch Firebase iOS packages
-        script: |
-          set -e
-          python3 tool/patch_firebase_ios.py
+      cd "$PROJECT_DIR"
 
-      - name: Verify iOS Firebase configuration
-        script: |
-          set -e
-          python3 tool/configure_ios_firebase.py
+      python3 tool/patch_firebase_ios.py
 
-      - name: Set App Store Bundle ID
-        script: |
-          set -e
-          /usr/bin/sed -i '' 's/com\.kina\.goldenHandCare/com.kina.care/g' ios/Runner.xcodeproj/project.pbxproj
-          /usr/bin/sed -i '' 's/com\.kina\.goldenHandCare/com.kina.care/g' ios/Runner/Info.plist
+  - name: Verify iOS Firebase configuration
+    script: |
+      set -e
 
-      - name: Verify iOS project configuration
-        script: |
-          set -e
-          test -f ios/Podfile
-          grep -q "platform :ios, '15.0'" ios/Podfile
-          grep -q "use_frameworks! :linkage => :static" ios/Podfile
-          grep -q "use_modular_headers!" ios/Podfile
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
 
-      - name: Install CocoaPods dependencies
-        script: |
-          set -e
-          cd ios
-          pod deintegrate
-          pod install --repo-update
-          cd ..
+      cd "$PROJECT_DIR"
 
-      - name: Build iOS App Store
-        script: |
-          set -e
-          flutter build ipa --release --build-number="${BUILD_NUMBER:-1}"
+      python3 tool/configure_ios_firebase.py
 
-    artifacts:
-      - build/ios/ipa/*.ipa
-      - build/ios/archive/*.xcarchive
+  - name: Verify iOS project configuration
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR"
+
+      test -f ios/Podfile
+      grep -q "platform :ios, '15.0'" ios/Podfile
+      grep -q "use_frameworks! :linkage => :static" ios/Podfile
+      grep -q "use_modular_headers!" ios/Podfile
+
+  - name: Install CocoaPods dependencies
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR/ios"
+
+      pod deintegrate
+      pod install --repo-update
+
+      cd "$PROJECT_DIR"
+
+  - name: Build iOS unsigned
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR"
+
+      flutter build ios --release --no-codesign --build-number="${BUILD_NUMBER:-1}"
+
+artifacts:
+  - build/ios/iphoneos/*.app
+
+ios-appstore:
+name: iOS App Store Build
+instance_type: mac_mini_m2
+max_build_duration: 60
+
+environment:
+  flutter: 3.41.2
+  xcode: 16.2
+  cocoapods: 1.16.2
+
+  ios_signing:
+    distribution_type: app_store
+    bundle_identifier: com.kina.care
+
+scripts:
+  - name: Install Flutter dependencies
+    script: |
+      set -e
+
+      echo "=== CURRENT DIRECTORY ==="
+      pwd
+
+      echo "=== CM_BUILD_DIR ==="
+      echo "$CM_BUILD_DIR"
+
+      echo "=== SEARCHING FOR PUBSPEC.YAML ==="
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+
+      if [ -z "$PUBSPEC_PATH" ]; then
+        echo "ERROR: pubspec.yaml was not found."
+        echo "Searching current workspace..."
+        find . -name pubspec.yaml -type f -print
+        exit 1
+      fi
+
+      echo "=== PUBSPEC FOUND ==="
+      echo "$PUBSPEC_PATH"
+
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      echo "=== FLUTTER PROJECT ROOT ==="
+      echo "$PROJECT_DIR"
+
+      cd "$PROJECT_DIR"
+
+      echo "=== PROJECT ROOT CHECK ==="
+      pwd
+      test -f pubspec.yaml
+
+      flutter config --no-enable-swift-package-manager
+      flutter pub get
+
+  - name: Analyze Flutter project
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR"
+
+      flutter analyze --no-pub --no-fatal-infos
+
+  - name: Run Flutter tests
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR"
+
+      flutter test --no-pub
+
+  - name: Run Python tests
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR"
+
+      if [ -d "tool" ]; then
+        python3 -m unittest discover -s tool -p "test_*.py"
+      fi
+
+  - name: Patch Firebase iOS packages
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR"
+
+      python3 tool/patch_firebase_ios.py
+
+  - name: Verify iOS Firebase configuration
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR"
+
+      python3 tool/configure_ios_firebase.py
+
+  - name: Set App Store Bundle ID
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR"
+
+      /usr/bin/sed -i '' 's/com\.kina\.goldenHandCare/com.kina.care/g' ios/Runner.xcodeproj/project.pbxproj
+      /usr/bin/sed -i '' 's/com\.kina\.goldenHandCare/com.kina.care/g' ios/Runner/Info.plist
+
+  - name: Verify iOS project configuration
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR"
+
+      test -f ios/Podfile
+      grep -q "platform :ios, '15.0'" ios/Podfile
+      grep -q "use_frameworks! :linkage => :static" ios/Podfile
+      grep -q "use_modular_headers!" ios/Podfile
+
+  - name: Install CocoaPods dependencies
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR/ios"
+
+      pod deintegrate
+      pod install --repo-update
+
+      cd "$PROJECT_DIR"
+
+  - name: Build iOS App Store
+    script: |
+      set -e
+
+      PUBSPEC_PATH=$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)
+      PROJECT_DIR=$(dirname "$PUBSPEC_PATH")
+
+      cd "$PROJECT_DIR"
+
+      flutter build ipa --release --build-number="${BUILD_NUMBER:-1}"
+
+artifacts:
+  - build/ios/ipa/*.ipa
+  - build/ios/archive/*.xcarchive
