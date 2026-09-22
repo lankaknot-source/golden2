@@ -29,6 +29,7 @@ workflows:
         script: |
           set -euo pipefail
           python3 tool/patch_firebase_ios.py
+          python3 tool/configure_ios_firebase.py
 
       - name: Install CocoaPods dependencies
         script: |
@@ -85,6 +86,7 @@ workflows:
         script: |
           set -euo pipefail
           python3 tool/patch_firebase_ios.py
+          python3 tool/configure_ios_firebase.py
 
       - name: Install CocoaPods dependencies
         script: |
