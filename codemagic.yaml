@@ -7,7 +7,7 @@ workflows:
 
     environment:
       flutter: 3.41.2
-      xcode: 16.2
+      xcode: 26.0
       cocoapods: 1.16.2
 
     scripts:
@@ -66,7 +66,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.kina.goldenHandCare
       flutter: 3.41.2
-      xcode: 16.2
+      xcode: 26.0
       cocoapods: 1.16.2
 
     scripts:
