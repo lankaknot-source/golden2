@@ -1,170 +1,145 @@
 workflows:
-ios-test-unsigned:
-name: iOS Test Build
-instance_type: mac_mini_m2
-max_build_duration: 60
+  ios-test-unsigned:
+    name: iOS Test Build
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: 3.41.2
+      xcode: 16.2
+      cocoapods: 1.16.2
+    scripts:
+      - name: Install Flutter dependencies
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR"
+          flutter config --no-enable-swift-package-manager
+          flutter pub get
 
-```
-environment:
-  flutter: 3.41.2
-  xcode: 16.2
-  cocoapods: 1.16.2
+      - name: Analyze Flutter project
+        script: |
+          set -e
+          flutter analyze --no-pub --no-fatal-infos
 
-scripts:
-  - name: Install Flutter dependencies
-    script: |
-      set -e
-      echo "=== CURRENT DIRECTORY ==="
-      pwd
-      echo "=== FILES IN CURRENT DIRECTORY ==="
-      ls -la
-      echo "=== SEARCHING FOR PUBSPEC ==="
-      find .. -maxdepth 3 -name pubspec.yaml -print
-      cd "$CM_BUILD_DIR"
-      echo "=== PROJECT DIRECTORY ==="
-      pwd
-      ls -la
-      flutter config --no-enable-swift-package-manager
-      flutter pub get
+      - name: Run Flutter tests
+        script: |
+          set -e
+          flutter test --no-pub
 
-  - name: Analyze Flutter project
-    script: |
-      set -e
-      flutter analyze --no-pub --no-fatal-infos
+      - name: Run Python tests
+        script: |
+          set -e
+          if [ -d "tool" ]; then
+            python3 -m unittest discover -s tool -p "test_*.py"
+          fi
 
-  - name: Run Flutter tests
-    script: |
-      set -e
-      flutter test --no-pub
+      - name: Patch Firebase iOS packages
+        script: |
+          set -e
+          python3 tool/patch_firebase_ios.py
 
-  - name: Run Python tests
-    script: |
-      set -e
-      if [ -d "tool" ]; then
-        python3 -m unittest discover -s tool -p "test_*.py"
-      fi
+      - name: Verify iOS Firebase configuration
+        script: |
+          set -e
+          python3 tool/configure_ios_firebase.py
 
-  - name: Patch Firebase iOS packages
-    script: |
-      set -e
-      python3 tool/patch_firebase_ios.py
+      - name: Verify iOS project configuration
+        script: |
+          set -e
+          test -f ios/Podfile
+          grep -q "platform :ios, '15.0'" ios/Podfile
+          grep -q "use_frameworks! :linkage => :static" ios/Podfile
+          grep -q "use_modular_headers!" ios/Podfile
 
-  - name: Verify iOS Firebase configuration
-    script: |
-      set -e
-      python3 tool/configure_ios_firebase.py
+      - name: Install CocoaPods dependencies
+        script: |
+          set -e
+          cd ios
+          pod deintegrate
+          pod install --repo-update
+          cd ..
 
-  - name: Verify iOS project configuration
-    script: |
-      set -e
-      test -f ios/Podfile
-      grep -q "platform :ios, '15.0'" ios/Podfile
-      grep -q "use_frameworks! :linkage => :static" ios/Podfile
-      grep -q "use_modular_headers!" ios/Podfile
+      - name: Build iOS unsigned
+        script: |
+          set -e
+          flutter build ios --release --no-codesign --build-number="${BUILD_NUMBER:-1}"
 
-  - name: Install CocoaPods dependencies
-    script: |
-      set -e
-      cd ios
-      pod deintegrate
-      pod install --repo-update
-      cd ..
+    artifacts:
+      - build/ios/iphoneos/*.app
 
-  - name: Build iOS unsigned
-    script: |
-      set -e
-      flutter build ios --release --no-codesign --build-number="${BUILD_NUMBER:-1}"
+  ios-appstore:
+    name: iOS App Store Build
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: 3.41.2
+      xcode: 16.2
+      cocoapods: 1.16.2
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.kina.care
 
-artifacts:
-  - build/ios/iphoneos/*.app
-```
+    scripts:
+      - name: Install Flutter dependencies
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR"
+          flutter config --no-enable-swift-package-manager
+          flutter pub get
 
-ios-appstore:
-name: iOS App Store Build
-instance_type: mac_mini_m2
-max_build_duration: 60
+      - name: Analyze Flutter project
+        script: |
+          set -e
+          flutter analyze --no-pub --no-fatal-infos
 
-```
-environment:
-  flutter: 3.41.2
-  xcode: 16.2
-  cocoapods: 1.16.2
+      - name: Run Flutter tests
+        script: |
+          set -e
+          flutter test --no-pub
 
-  ios_signing:
-    distribution_type: app_store
-    bundle_identifier: com.kina.care
+      - name: Run Python tests
+        script: |
+          set -e
+          if [ -d "tool" ]; then
+            python3 -m unittest discover -s tool -p "test_*.py"
+          fi
 
-scripts:
-  - name: Install Flutter dependencies
-    script: |
-      set -e
-      echo "=== CURRENT DIRECTORY ==="
-      pwd
-      echo "=== FILES IN CURRENT DIRECTORY ==="
-      ls -la
-      echo "=== SEARCHING FOR PUBSPEC ==="
-      find .. -maxdepth 3 -name pubspec.yaml -print
-      cd "$CM_BUILD_DIR"
-      echo "=== PROJECT DIRECTORY ==="
-      pwd
-      ls -la
-      flutter config --no-enable-swift-package-manager
-      flutter pub get
+      - name: Patch Firebase iOS packages
+        script: |
+          set -e
+          python3 tool/patch_firebase_ios.py
 
-  - name: Analyze Flutter project
-    script: |
-      set -e
-      flutter analyze --no-pub --no-fatal-infos
+      - name: Verify iOS Firebase configuration
+        script: |
+          set -e
+          python3 tool/configure_ios_firebase.py
 
-  - name: Run Flutter tests
-    script: |
-      set -e
-      flutter test --no-pub
+      - name: Set App Store Bundle ID
+        script: |
+          set -e
+          /usr/bin/sed -i '' 's/com\.kina\.goldenHandCare/com.kina.care/g' ios/Runner.xcodeproj/project.pbxproj
+          /usr/bin/sed -i '' 's/com\.kina\.goldenHandCare/com.kina.care/g' ios/Runner/Info.plist
 
-  - name: Run Python tests
-    script: |
-      set -e
-      if [ -d "tool" ]; then
-        python3 -m unittest discover -s tool -p "test_*.py"
-      fi
+      - name: Verify iOS project configuration
+        script: |
+          set -e
+          test -f ios/Podfile
+          grep -q "platform :ios, '15.0'" ios/Podfile
+          grep -q "use_frameworks! :linkage => :static" ios/Podfile
+          grep -q "use_modular_headers!" ios/Podfile
 
-  - name: Patch Firebase iOS packages
-    script: |
-      set -e
-      python3 tool/patch_firebase_ios.py
+      - name: Install CocoaPods dependencies
+        script: |
+          set -e
+          cd ios
+          pod deintegrate
+          pod install --repo-update
+          cd ..
 
-  - name: Verify iOS Firebase configuration
-    script: |
-      set -e
-      python3 tool/configure_ios_firebase.py
+      - name: Build iOS App Store
+        script: |
+          set -e
+          flutter build ipa --release --build-number="${BUILD_NUMBER:-1}"
 
-  - name: Set App Store Bundle ID
-    script: |
-      set -e
-      /usr/bin/sed -i '' 's/com\.kina\.goldenHandCare/com.kina.care/g' ios/Runner.xcodeproj/project.pbxproj
-      /usr/bin/sed -i '' 's/com\.kina\.goldenHandCare/com.kina.care/g' ios/Runner/Info.plist
-
-  - name: Verify iOS project configuration
-    script: |
-      set -e
-      test -f ios/Podfile
-      grep -q "platform :ios, '15.0'" ios/Podfile
-      grep -q "use_frameworks! :linkage => :static" ios/Podfile
-      grep -q "use_modular_headers!" ios/Podfile
-
-  - name: Install CocoaPods dependencies
-    script: |
-      set -e
-      cd ios
-      pod deintegrate
-      pod install --repo-update
-      cd ..
-
-  - name: Build iOS App Store
-    script: |
-      set -e
-      flutter build ipa --release --build-number="${BUILD_NUMBER:-1}"
-
-artifacts:
-  - build/ios/ipa/*.ipa
-  - build/ios/archive/*.xcarchive
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
