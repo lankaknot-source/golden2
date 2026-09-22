@@ -61,7 +61,7 @@ workflows:
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.kina.care
+        bundle_identifier: com.kina.goldenHandCare
       flutter: 3.41.2
       xcode: 16.2
       cocoapods: 1.16.2
@@ -85,14 +85,6 @@ workflows:
         script: |
           set -euo pipefail
           python3 tool/patch_firebase_ios.py
-
-      - name: Set release bundle identifier
-        script: |
-          set -euo pipefail
-          sed -i '' -E \
-            's/com\.kina\.[A-Za-z0-9_-]+/com.kina.care/g' \
-            ios/Runner.xcodeproj/project.pbxproj
-          python3 tool/check_ios_configuration.py
 
       - name: Install CocoaPods dependencies
         script: |

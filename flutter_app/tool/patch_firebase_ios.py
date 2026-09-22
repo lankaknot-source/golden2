@@ -5,6 +5,15 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse
 from urllib.request import url2pathname
 
+FIREBASE_MODULES = {
+    "firebase_core": "FirebaseCore",
+    "firebase_auth": "FirebaseAuth",
+    "cloud_firestore": "FirebaseFirestore",
+    "firebase_storage": "FirebaseStorage",
+    "firebase_database": "FirebaseDatabase",
+    "firebase_messaging": "FirebaseMessaging",
+}
+
 
 AUTH_IMPORT = """#if __has_include(<FirebaseAuth/FirebaseAuth.h>)
 #import <FirebaseAuth/FirebaseAuth.h>
@@ -18,12 +27,17 @@ def patch_package(package_root, module):
         raise RuntimeError(f"Legacy iOS sources not found: {classes}")
 
     for source in sorted(classes.rglob("*")):
-        if source.suffix not in (".h", ".m"):
+        if source.suffix not in (".h", ".m", ".mm"):
             continue
         original = source.read_text(encoding="utf-8")
+        # Plugins also use FIRApp/FIROptions from Core. Keep those declarations
+        # when replacing the non-modular Firebase umbrella with module headers.
+        imports = "#import <FirebaseCore/FirebaseCore.h>"
+        if module != "FirebaseCore":
+            imports += f"\n#import <{module}/{module}.h>"
         patched = original.replace(
             "#import <Firebase/Firebase.h>",
-            f"#import <{module}/{module}.h>",
+            imports,
         )
         if source.name == "FLTFirebaseMessagingPlugin.m":
             # The optional phone-auth notification handler still uses FIRAuth.
@@ -43,10 +57,7 @@ def main():
     # overrides, rather than every historical package in the global cache.
     config = Path(__file__).resolve().parents[1] / ".dart_tool/package_config.json"
     packages = {p["name"]: p for p in json.loads(config.read_text())["packages"]}
-    for name, module in (
-        ("firebase_database", "FirebaseDatabase"),
-        ("firebase_messaging", "FirebaseMessaging"),
-    ):
+    for name, module in FIREBASE_MODULES.items():
         root_uri = urlparse(urljoin(config.as_uri(), packages[name]["rootUri"]))
         if root_uri.scheme != "file" or root_uri.netloc:
             raise RuntimeError(f"Unsupported package URI: {root_uri.geturl()}")

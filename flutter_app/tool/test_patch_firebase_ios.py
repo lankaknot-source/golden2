@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from patch_firebase_ios import AUTH_IMPORT, patch_package
+from patch_firebase_ios import AUTH_IMPORT, FIREBASE_MODULES, patch_package
 
 
 class FirebaseHeaderPatchTest(unittest.TestCase):
@@ -43,7 +43,34 @@ class FirebaseHeaderPatchTest(unittest.TestCase):
             source = classes / "FLTFirebaseDatabasePlugin.m"
             source.write_text("#import <Firebase/Firebase.h>\n")
             patch_package(root, "FirebaseDatabase")
-            self.assertEqual(source.read_text(), "#import <FirebaseDatabase/FirebaseDatabase.h>\n")
+            self.assertIn("#import <FirebaseCore/FirebaseCore.h>", source.read_text())
+            self.assertIn("#import <FirebaseDatabase/FirebaseDatabase.h>", source.read_text())
+            self.assertNotIn("FirebaseAuth", source.read_text())
+
+    def test_all_plugins_patch_nested_headers_and_objcpp_without_losing_core(self):
+        self.assertEqual(set(FIREBASE_MODULES), {
+            "firebase_core", "firebase_auth", "cloud_firestore",
+            "firebase_storage", "firebase_database", "firebase_messaging",
+        })
+        for name, module in FIREBASE_MODULES.items():
+            with self.subTest(package=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                sources = []
+                for filename in ("Private/Handler.h", "Public/Plugin.h", "Plugin.m", "Parser.mm"):
+                    source = root / "ios/Classes" / filename
+                    source.parent.mkdir(parents=True, exist_ok=True)
+                    source.write_text("#import <Firebase/Firebase.h>\nFIRApp *app;\n")
+                    sources.append(source)
+                patch_package(root, module)
+                for source in sources:
+                    patched = source.read_text()
+                    self.assertNotIn("Firebase/Firebase.h", patched)
+                    self.assertEqual(patched.count("#import <FirebaseCore/FirebaseCore.h>"), 1)
+                    self.assertIn(f"#import <{module}/{module}.h>", patched)
+                    self.assertIn("FIRApp *app;", patched)
+                first = [source.read_bytes() for source in sources]
+                patch_package(root, module)
+                self.assertEqual(first, [source.read_bytes() for source in sources])
 
     def test_missing_legacy_sources_fail_early(self):
         with tempfile.TemporaryDirectory() as tmp:

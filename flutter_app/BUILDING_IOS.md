@@ -30,6 +30,11 @@ but do not block compilation. The Firebase patch is tested for fresh downloads,
 already patched sources, and repeat execution. The Podfile also removes the
 invalid BoringSSL-GRPC compiler flag on every `pod install`.
 
+The header patch covers Core, Auth, Firestore, Storage, Database, and Messaging,
+including nested public/private headers and Objective-C++ implementations. It
+preserves explicit FirebaseCore imports and Messaging's optional FirebaseAuth
+import when replacing the non-modular `Firebase/Firebase.h` umbrella.
+
 On macOS, install pods and compile the unsigned app:
 
 ```sh
@@ -46,21 +51,10 @@ the resolved native dependency versions can be reviewed after a build.
 
 ## Signed workflow configuration still required
 
-The checked-in Firebase iOS app and Runner use `com.kina.goldenHandCare`.
-The existing TestFlight workflow requests signing for `com.kina.care` and changes
-Runner to that identifier. These are distinct application registrations.
-
-Before running the signed workflow, select the intended identifier:
-
-- If retaining `com.kina.goldenHandCare`, use matching App Store Connect and
-  provisioning registrations and update the signing workflow accordingly.
-- If retaining `com.kina.care`, supply its registered `GoogleService-Info.plist`
-  and matching Google Sign-In client ID and callback URL scheme. Editing only
-  the `BUNDLE_ID` in the old Firebase plist does not register the new app.
-
-The configuration check runs again after the signed workflow changes Runner's
-identifier, so this mismatch is reported before a long native compilation.
-The unsigned workflow uses the existing matching Firebase registration.
+The checked-in Firebase iOS app, Runner, and both Codemagic workflows use
+`com.kina.goldenHandCare`. The App Store Connect integration must contain an
+Apple App ID and provisioning profile for this exact identifier; Codemagic cannot
+sign an app with a different profile and Firebase plist identity.
 
 Only a successful macOS/Xcode build confirms native compilation. Windows source
 analysis and Python checks cannot verify CocoaPods linking or Apple signing.
