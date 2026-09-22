@@ -8,7 +8,7 @@ workflows:
       xcode: 16.2
       cocoapods: 1.16.2
     scripts:
-      ```
+      
   - name: Install Flutter dependencies
     script: |
       set -e
@@ -39,8 +39,6 @@ workflows:
 
       flutter config --no-enable-swift-package-manager
       flutter pub get
-```
-
 
       - name: Analyze Flutter project
         script: |
