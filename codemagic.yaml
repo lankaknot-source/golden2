@@ -30,15 +30,25 @@ workflows:
           set -euo pipefail
           python3 tool/patch_firebase_ios.py
 
+      - name: Apply iOS Firebase build settings
+        script: |
+          set -euo pipefail
+          python3 tool/configure_ios_firebase.py
+
       - name: Install CocoaPods dependencies
         script: |
           set -euo pipefail
           cd ios
+          rm -rf Pods
+          rm -f Podfile.lock
+          pod deintegrate || true
           pod install --repo-update
+          cd ..
 
       - name: Build iOS without code signing
         script: |
           set -euo pipefail
+          flutter clean
           flutter build ios \
             --release \
             --no-codesign \
@@ -86,6 +96,11 @@ workflows:
           set -euo pipefail
           python3 tool/patch_firebase_ios.py
 
+      - name: Apply iOS Firebase build settings
+        script: |
+          set -euo pipefail
+          python3 tool/configure_ios_firebase.py
+
       - name: Set release bundle identifier
         script: |
           set -euo pipefail
@@ -98,7 +113,11 @@ workflows:
         script: |
           set -euo pipefail
           cd ios
+          rm -rf Pods
+          rm -f Podfile.lock
+          pod deintegrate || true
           pod install --repo-update
+          cd ..
 
       - name: Configure automatic code signing
         script: |
@@ -108,6 +127,7 @@ workflows:
       - name: Build signed IPA
         script: |
           set -euo pipefail
+          flutter clean
           flutter build ipa \
             --release \
             --build-number="$BUILD_NUMBER" \
