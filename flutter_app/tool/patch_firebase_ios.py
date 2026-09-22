@@ -42,6 +42,23 @@ def patch_package(package_root, module):
             if auth_import not in patched:
                 patched = auth_import + "\n\n" + patched
 
+        # Keep the existing Firebase Messaging Auth notification
+        # handler behavior required by the project's tests.
+        if source.name == "FLTFirebaseMessagingPlugin.m":
+            if AUTH_IMPORT not in patched:
+                anchor = '#import "FLTFirebaseMessagingPlugin.h"\n'
+
+                if anchor not in patched:
+                    raise RuntimeError(
+                        f"Messaging import anchor missing: {source}"
+                    )
+
+                patched = patched.replace(
+                    anchor,
+                    anchor + AUTH_IMPORT,
+                    1,
+                )
+
         if patched != original:
             source.write_text(patched, encoding="utf-8")
             print(f"Patched {source}")
