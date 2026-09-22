@@ -35,6 +35,15 @@ def patch_package(package_root, module):
             f"#import <{module}/{module}.h>",
         )
 
+        # Cloud Firestore uses FIRApp.
+        # FirebaseCore provides the full FIRApp declaration,
+        # including properties such as "name".
+        if module == "FirebaseFirestore" and "FIRApp" in patched:
+            core_import = "#import <FirebaseCore/FirebaseCore.h>"
+
+            if core_import not in patched:
+                patched = core_import + "\n\n" + patched
+
         # Firebase Auth may use FIRAuth types.
         if module == "FirebaseAuth" and "FIRAuth" in patched:
             auth_import = "#import <FirebaseAuth/FirebaseAuth.h>"
