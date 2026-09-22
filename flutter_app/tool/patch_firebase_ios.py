@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
 
-"""Replace legacy Firebase umbrella imports in selected FlutterFire iOS packages."""
+"""Fix legacy Firebase umbrella imports for FlutterFire iOS packages."""
 
 import json
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 from urllib.request import url2pathname
-
-
-AUTH_IMPORT = """#if __has_include(<FirebaseAuth/FirebaseAuth.h>)
-#import <FirebaseAuth/FirebaseAuth.h>
-#endif
-"""
 
 
 def patch_package(package_root, module):
@@ -27,35 +21,21 @@ def patch_package(package_root, module):
         original = source.read_text(encoding="utf-8")
         patched = original
 
-        # Replace Firebase umbrella header.
+        # Replace:
+        # #import <Firebase/Firebase.h>
+        #
+        # with the specific Firebase module header.
         patched = patched.replace(
             "#import <Firebase/Firebase.h>",
             f"#import <{module}/{module}.h>",
         )
 
-        # firebase_auth may reference FIRAuth types from headers.
-        if module == "FirebaseAuth":
-            if "FIRAuth" in patched and "#import <FirebaseAuth/FirebaseAuth.h>" not in patched:
-                patched = (
-                    "#import <FirebaseAuth/FirebaseAuth.h>\n\n"
-                    + patched
-                )
+        # Firebase Auth uses FIRAuth types.
+        if module == "FirebaseAuth" and "FIRAuth" in patched:
+            auth_import = "#import <FirebaseAuth/FirebaseAuth.h>"
 
-        # firebase_messaging optional Auth notification handler.
-        if source.name == "FLTFirebaseMessagingPlugin.m":
-            if "#import <FirebaseAuth/FirebaseAuth.h>" not in patched:
-                anchor = '#import "FLTFirebaseMessagingPlugin.h"\n'
-
-                if anchor not in patched:
-                    raise RuntimeError(
-                        f"Messaging import anchor missing: {source}"
-                    )
-
-                patched = patched.replace(
-                    anchor,
-                    anchor + "\n" + AUTH_IMPORT,
-                    1,
-                )
+            if auth_import not in patched:
+                patched = auth_import + "\n\n" + patched
 
         if patched != original:
             source.write_text(patched, encoding="utf-8")
@@ -63,25 +43,30 @@ def patch_package(package_root, module):
 
 
 def main():
-    # Only patch the package versions selected by flutter pub get.
-    config = (
-        Path(__file__).resolve().parents[1]
-        / ".dart_tool"
-        / "package_config.json"
-    )
+    project_root = Path(__file__).resolve().parents[1]
+
+    config = project_root / ".dart_tool" / "package_config.json"
 
     if not config.exists():
-        raise RuntimeError(f"Package configuration not found: {config}")
+        raise RuntimeError(
+            f"Package configuration not found: {config}"
+        )
+
+    data = json.loads(
+        config.read_text(encoding="utf-8")
+    )
 
     packages = {
-        p["name"]: p
-        for p in json.loads(config.read_text(encoding="utf-8"))["packages"]
+        package["name"]: package
+        for package in data["packages"]
     }
 
+    # Your app uses only:
+    #   firebase_auth
+    #   cloud_firestore
     packages_to_patch = (
         ("firebase_auth", "FirebaseAuth"),
-        ("firebase_database", "FirebaseDatabase"),
-        ("firebase_messaging", "FirebaseMessaging"),
+        ("cloud_firestore", "FirebaseFirestore"),
     )
 
     for name, module in packages_to_patch:
@@ -101,8 +86,12 @@ def main():
                 f"Unsupported package URI: {root_uri.geturl()}"
             )
 
+        package_root = Path(
+            url2pathname(root_uri.path)
+        )
+
         patch_package(
-            Path(url2pathname(root_uri.path)),
+            package_root,
             module,
         )
 
