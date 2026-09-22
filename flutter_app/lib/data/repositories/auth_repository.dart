@@ -7,8 +7,11 @@ import '../../core/constants/app_constants.dart';
 import '../../domain/models/user_model.dart';
 
 class AuthRepository {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Keep these lazy: AuthRepository is created while the first Flutter frame
+  // is being built, and Firebase may still be bootstrapping in the background
+  // on iOS.
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   GoogleSignIn? _gsInstance;
   GoogleSignIn get _googleSignIn => _gsInstance ??= GoogleSignIn(
         clientId: '283184840115-dh6l2j6f0u3ov03nih26slfi4i832ev6.apps.googleusercontent.com',
