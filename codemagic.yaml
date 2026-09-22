@@ -1,146 +1,208 @@
 workflows:
-  ios-test-unsigned:
-    name: iOS Test Build (unsigned, free)
-    instance_type: mac_mini_m2
-    max_build_duration: 60
-    working_directory: flutter_app
+ios-test-unsigned:
+name: iOS Test Build (unsigned, free)
+instance_type: mac_mini_m2
+max_build_duration: 60
+working_directory: flutter_app
 
-    environment:
-      flutter: 3.41.2
-      xcode: 16.2
-      cocoapods: 1.16.2
+```
+environment:
+  flutter: 3.41.2
+  xcode: 16.2
+  cocoapods: 1.16.2
 
-    scripts:
-      - name: Install Flutter dependencies
-        script: |
-          set -euo pipefail
-          flutter config --no-enable-swift-package-manager
-          flutter pub get --enforce-lockfile
+scripts:
+  - name: Install Flutter dependencies
+    script: |
+      set -euo pipefail
 
-      - name: Validate Flutter project
-        script: |
-          set -euo pipefail
-          flutter analyze --no-pub --no-fatal-infos
-          flutter test --no-pub
-          python3 -B -m unittest discover -s tool -p 'test_*.py'
-          python3 tool/check_ios_configuration.py
+      flutter config --no-enable-swift-package-manager
+      flutter pub get --enforce-lockfile
 
-      - name: Patch legacy Firebase iOS headers
-        script: |
-          set -euo pipefail
-          python3 tool/patch_firebase_ios.py
+  - name: Validate Flutter project
+    script: |
+      set -euo pipefail
 
-      - name: Apply iOS Firebase build settings
-        script: |
-          set -euo pipefail
-          python3 tool/configure_ios_firebase.py
+      flutter analyze --no-pub --no-fatal-infos
+      flutter test --no-pub
 
-      - name: Install CocoaPods dependencies
-        script: |
-          set -euo pipefail
-          cd ios
-          rm -rf Pods
-          rm -f Podfile.lock
-          pod deintegrate || true
-          pod install --repo-update
-          cd ..
+      python3 -B -m unittest discover \
+        -s tool \
+        -p 'test_*.py'
 
-      - name: Build iOS without code signing
-        script: |
-          set -euo pipefail
-          flutter clean
-          flutter build ios \
-            --release \
-            --no-codesign \
-            --build-number="$BUILD_NUMBER"
+      python3 tool/check_ios_configuration.py
 
-    artifacts:
-      - flutter_app/build/ios/iphoneos/Runner.app
-      - flutter_app/ios/Podfile.lock
-      - /tmp/xcodebuild_logs/*.log
+  - name: Patch legacy Firebase iOS headers
+    script: |
+      set -euo pipefail
 
-  ios-appstore:
-    name: iOS App Store (signed, TestFlight)
-    instance_type: mac_mini_m2
-    max_build_duration: 120
-    working_directory: flutter_app
+      python3 tool/patch_firebase_ios.py
 
-    integrations:
-      app_store_connect: CodemagicAppStoreConnect
+  - name: Apply iOS Firebase build settings
+    script: |
+      set -euo pipefail
 
-    environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.kina.care
-      flutter: 3.41.2
-      xcode: 16.2
-      cocoapods: 1.16.2
+      python3 tool/configure_ios_firebase.py
 
-    scripts:
-      - name: Install Flutter dependencies
-        script: |
-          set -euo pipefail
-          flutter config --no-enable-swift-package-manager
-          flutter pub get --enforce-lockfile
+  - name: Verify iOS Firebase Podfile configuration
+    script: |
+      set -euo pipefail
 
-      - name: Validate Flutter project
-        script: |
-          set -euo pipefail
-          flutter analyze --no-pub --no-fatal-infos
-          flutter test --no-pub
-          python3 -B -m unittest discover -s tool -p 'test_*.py'
-          python3 tool/check_ios_configuration.py
+      test -f ios/Podfile
 
-      - name: Patch legacy Firebase iOS headers
-        script: |
-          set -euo pipefail
-          python3 tool/patch_firebase_ios.py
+      grep -q "use_frameworks! :linkage => :static" ios/Podfile
+      grep -q "use_modular_headers!" ios/Podfile
+      grep -q "CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES" ios/Podfile
+      grep -q "DEFINES_MODULE" ios/Podfile
 
-      - name: Apply iOS Firebase build settings
-        script: |
-          set -euo pipefail
-          python3 tool/configure_ios_firebase.py
+      echo "iOS Firebase Podfile configuration verified."
 
-      - name: Set release bundle identifier
-        script: |
-          set -euo pipefail
-          sed -i '' -E \
-            's/com\.kina\.[A-Za-z0-9_-]+/com.kina.care/g' \
-            ios/Runner.xcodeproj/project.pbxproj
-          python3 tool/check_ios_configuration.py
+  - name: Install CocoaPods dependencies
+    script: |
+      set -euo pipefail
 
-      - name: Install CocoaPods dependencies
-        script: |
-          set -euo pipefail
-          cd ios
-          rm -rf Pods
-          rm -f Podfile.lock
-          pod deintegrate || true
-          pod install --repo-update
-          cd ..
+      cd ios
 
-      - name: Configure automatic code signing
-        script: |
-          set -euo pipefail
-          xcode-project use-profiles
+      rm -rf Pods
+      rm -f Podfile.lock
 
-      - name: Build signed IPA
-        script: |
-          set -euo pipefail
-          flutter clean
-          flutter build ipa \
-            --release \
-            --build-number="$BUILD_NUMBER" \
-            --export-options-plist=/Users/builder/export_options.plist
+      pod deintegrate || true
+      pod install --repo-update
 
-    artifacts:
-      - flutter_app/build/ios/ipa/*.ipa
-      - flutter_app/build/ios/archive/*.xcarchive
-      - flutter_app/ios/Podfile.lock
-      - /tmp/xcodebuild_logs/*.log
+      cd ..
 
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
-        submit_to_app_store: false
+  - name: Build iOS without code signing
+    script: |
+      set -euo pipefail
+
+      flutter clean
+
+      flutter build ios \
+        --release \
+        --no-codesign \
+        --build-number="${BUILD_NUMBER:-1}"
+
+artifacts:
+  - build/ios/iphoneos/Runner.app
+  - ios/Podfile.lock
+  - /tmp/xcodebuild_logs/*.log
+```
+
+ios-appstore:
+name: iOS App Store (signed, TestFlight)
+instance_type: mac_mini_m2
+max_build_duration: 120
+working_directory: flutter_app
+
+```
+integrations:
+  app_store_connect: CodemagicAppStoreConnect
+
+environment:
+  ios_signing:
+    distribution_type: app_store
+    bundle_identifier: com.kina.care
+
+  flutter: 3.41.2
+  xcode: 16.2
+  cocoapods: 1.16.2
+
+scripts:
+  - name: Install Flutter dependencies
+    script: |
+      set -euo pipefail
+
+      flutter config --no-enable-swift-package-manager
+      flutter pub get --enforce-lockfile
+
+  - name: Validate Flutter project
+    script: |
+      set -euo pipefail
+
+      flutter analyze --no-pub --no-fatal-infos
+      flutter test --no-pub
+
+      python3 -B -m unittest discover \
+        -s tool \
+        -p 'test_*.py'
+
+      python3 tool/check_ios_configuration.py
+
+  - name: Patch legacy Firebase iOS headers
+    script: |
+      set -euo pipefail
+
+      python3 tool/patch_firebase_ios.py
+
+  - name: Apply iOS Firebase build settings
+    script: |
+      set -euo pipefail
+
+      python3 tool/configure_ios_firebase.py
+
+  - name: Set release bundle identifier
+    script: |
+      set -euo pipefail
+
+      sed -i '' -E \
+        's/com\.kina\.[A-Za-z0-9_-]+/com.kina.care/g' \
+        ios/Runner.xcodeproj/project.pbxproj
+
+      python3 tool/check_ios_configuration.py
+
+  - name: Verify iOS Firebase Podfile configuration
+    script: |
+      set -euo pipefail
+
+      test -f ios/Podfile
+
+      grep -q "use_frameworks! :linkage => :static" ios/Podfile
+      grep -q "use_modular_headers!" ios/Podfile
+      grep -q "CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES" ios/Podfile
+      grep -q "DEFINES_MODULE" ios/Podfile
+
+      echo "iOS Firebase Podfile configuration verified."
+
+  - name: Install CocoaPods dependencies
+    script: |
+      set -euo pipefail
+
+      cd ios
+
+      rm -rf Pods
+      rm -f Podfile.lock
+
+      pod deintegrate || true
+      pod install --repo-update
+
+      cd ..
+
+  - name: Configure automatic code signing
+    script: |
+      set -euo pipefail
+
+      xcode-project use-profiles
+
+  - name: Build signed IPA
+    script: |
+      set -euo pipefail
+
+      flutter clean
+
+      flutter build ipa \
+        --release \
+        --build-number="${BUILD_NUMBER:-1}" \
+        --export-options-plist=/Users/builder/export_options.plist
+
+artifacts:
+  - build/ios/ipa/*.ipa
+  - build/ios/archive/*.xcarchive
+  - ios/Podfile.lock
+  - /tmp/xcodebuild_logs/*.log
+
+publishing:
+  app_store_connect:
+    auth: integration
+    submit_to_testflight: true
+    submit_to_app_store: false
+```
