@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Golden Hand Care</string>
+	<string>Golden Hand</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,6 +24,51 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<!-- ===================================================================== -->
+	<!-- Permission usage strings — මේවා නැතුව app crash + App Store reject     -->
+	<!-- ===================================================================== -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Golden Hand uses your location to share the caregiver's live position with clients and to verify presence at the care site.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Golden Hand needs background location to keep tracking the caregiver during an active job and to send safety (geofence) and SOS alerts even when the app is closed.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Golden Hand needs background location to keep tracking the caregiver during an active job and to send safety (geofence) and SOS alerts even when the app is closed.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Golden Hand uses the camera to take task-proof photos, medicine photos, and KYC verification images.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Golden Hand needs photo library access to upload KYC documents, certificates, and task-proof images.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Golden Hand saves exported care-log PDFs and receipts to your photo library.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Used to securely sign in to your Golden Hand account.</string>
+
+	<!-- ===================================================================== -->
+	<!-- Background execution modes                                             -->
+	<!-- ===================================================================== -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
+		<string>processing</string>
+	</array>
+
+	<!-- BGTaskScheduler IDs — workmanager iOS register කරද්දි මේ id ම Dart එකේ පාවිච්චි කරන්න -->
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.kina.goldenHandCare.medicineReminder</string>
+		<string>com.kina.goldenHandCare.jobReminder</string>
+	</array>
+
+	<!-- ===================================================================== -->
+	<!-- Google Sign-In URL scheme                                             -->
+	<!-- ⚠️ TODO: com.kina.goldenHandCare iOS app එක Firebase එකේ register කරලා            -->
+	<!--    GoogleService-Info.plist download කරාට පස්සේ, එකේ ඇති REVERSED_CLIENT_ID -->
+	<!--    එක පහත placeholder එක වෙනුවට දාන්න. නැතුව Google login වැඩ කරන්නේ නෑ.  -->
+	<!-- ===================================================================== -->
 	<key>GIDClientID</key>
 	<string>283184840115-hrrokdp8qbig9p9ql816tohgk8l3pf11.apps.googleusercontent.com</string>
 	<key>CFBundleURLTypes</key>
@@ -37,16 +82,44 @@
 			</array>
 		</dict>
 	</array>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>mailto</string>
+		<string>https</string>
+	</array>
+
+	<!-- Encryption export compliance (standard HTTPS only) -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
-	<key>UIStatusBarStyle</key>
-	<string></string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
