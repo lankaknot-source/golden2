@@ -110,8 +110,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                     else
                                       _buildClientGrid(),
                                     const SizedBox(height: 24),
-                                    _buildPromoSlider(),
-                                    const SizedBox(height: 24),
                                     if (user.role == "CLIENT")
                                       _buildTopCaregivers(state, viewModel),
                                   ],
@@ -391,46 +389,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildPromoSlider() {
-    return GlassContainer(
-      borderRadius: 22,
-      blur: 20,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            _t("Deal of the Day", "දවසේ දීමනාව"),
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _t("20% Off on all bookings today!",
-                "අද සියළු වෙන්කරවීම් 20% ක් ලාභදායී!"),
-            style:
-                TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.25),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.4)),
-            ),
-            child: Text(_t("Claim Offer", "දීමනාව ලබා ගන්න"),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12)),
-          ),
-        ],
       ),
     );
   }
