@@ -43,7 +43,12 @@ def check_project(app):
         for image in json.loads(catalog.read_text()).get("images", []):
             if "filename" in image and not (catalog.parent / image["filename"]).is_file():
                 raise ValueError(f"Missing iOS image: {image['filename']}")
-    if not (app / "assets/brand_logo.jpeg").is_file():
+    brand_images = (
+        app / "assets/brand_logo.jpeg",
+        app / "assets/images/logo.png",
+        app / "assets/icon/app_icon.png",
+    )
+    if not any(path.is_file() for path in brand_images):
         raise ValueError("Missing Flutter brand image")
     print("iOS configuration, Firebase identity, workspace, and assets are valid.")
 
