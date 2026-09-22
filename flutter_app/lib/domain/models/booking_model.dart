@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 enum BookingStatus {
   pending,
   broadcasted,
+  broadcastAccepted,
   accepted,
   inProgress,
   completed,
@@ -20,6 +21,8 @@ extension BookingStatusX on BookingStatus {
         return 'PENDING';
       case BookingStatus.broadcasted:
         return 'BROADCASTED';
+      case BookingStatus.broadcastAccepted:
+        return 'BROADCAST_ACCEPTED';
       case BookingStatus.accepted:
         return 'ACCEPTED';
       case BookingStatus.inProgress:
@@ -39,6 +42,8 @@ extension BookingStatusX on BookingStatus {
     switch ((s ?? '').toUpperCase()) {
       case 'BROADCASTED':
         return BookingStatus.broadcasted;
+      case 'BROADCAST_ACCEPTED':
+        return BookingStatus.broadcastAccepted;
       case 'ACCEPTED':
         return BookingStatus.accepted;
       case 'IN_PROGRESS':
@@ -85,6 +90,50 @@ class TaskProofEntry extends Equatable {
   List<Object?> get props => [taskName, photoUrl, timestamp];
 }
 
+/// A caregiver who accepted a broadcast job. This mirrors care2's
+/// `jobAcceptances` array so the iOS client can participate in the same
+/// primary/backup confirmation flow as the Android client.
+class JobAcceptance extends Equatable {
+  final String caregiverId;
+  final int acceptedAt;
+  final int acceptanceOrder;
+  final bool isPrimary;
+  final String confirmationStatus;
+
+  const JobAcceptance({
+    required this.caregiverId,
+    required this.acceptedAt,
+    required this.acceptanceOrder,
+    required this.isPrimary,
+    this.confirmationStatus = 'PENDING',
+  });
+
+  factory JobAcceptance.fromMap(Map<String, dynamic> map) => JobAcceptance(
+        caregiverId: map['caregiverId'] as String? ?? '',
+        acceptedAt: (map['acceptedAt'] as num?)?.toInt() ?? 0,
+        acceptanceOrder: (map['acceptanceOrder'] as num?)?.toInt() ?? 0,
+        isPrimary: map['isPrimary'] as bool? ?? false,
+        confirmationStatus: map['confirmationStatus'] as String? ?? 'PENDING',
+      );
+
+  Map<String, dynamic> toMap() => {
+        'caregiverId': caregiverId,
+        'acceptedAt': acceptedAt,
+        'acceptanceOrder': acceptanceOrder,
+        'isPrimary': isPrimary,
+        'confirmationStatus': confirmationStatus,
+      };
+
+  @override
+  List<Object?> get props => [
+        caregiverId,
+        acceptedAt,
+        acceptanceOrder,
+        isPrimary,
+        confirmationStatus,
+      ];
+}
+
 class Booking extends Equatable {
   final String id;
   final String clientId;
@@ -126,6 +175,10 @@ class Booking extends Equatable {
   final String caregiverResponse;
   final bool replacementRequested;
   final String replacementReason;
+  final String? pendingConfirmCaregiverId;
+  final int? confirmDeadlineMs;
+  final double broadcastRadius;
+  final List<JobAcceptance> jobAcceptances;
 
   const Booking({
     required this.id,
@@ -168,10 +221,15 @@ class Booking extends Equatable {
     this.caregiverResponse = '',
     this.replacementRequested = false,
     this.replacementReason = '',
+    this.pendingConfirmCaregiverId,
+    this.confirmDeadlineMs,
+    this.broadcastRadius = 5.0,
+    this.jobAcceptances = const [],
   });
 
   factory Booking.fromMap(Map<String, dynamic> map, String id) {
     final rawProofs = map['taskProofs'] as List? ?? [];
+    final rawAcceptances = map['jobAcceptances'] as List? ?? [];
     return Booking(
       id: id,
       clientId: map['clientId'] as String? ?? '',
@@ -215,6 +273,13 @@ class Booking extends Equatable {
       caregiverResponse: map['caregiverResponse'] as String? ?? '',
       replacementRequested: map['replacementRequested'] as bool? ?? false,
       replacementReason: map['replacementReason'] as String? ?? '',
+      pendingConfirmCaregiverId: map['pendingConfirmCaregiverId'] as String?,
+      confirmDeadlineMs: (map['confirmDeadlineMs'] as num?)?.toInt(),
+      broadcastRadius: (map['broadcastRadius'] as num?)?.toDouble() ?? 5.0,
+      jobAcceptances: rawAcceptances
+          .whereType<Map>()
+          .map((e) => JobAcceptance.fromMap(Map<String, dynamic>.from(e)))
+          .toList(),
     );
   }
 
@@ -258,6 +323,10 @@ class Booking extends Equatable {
         'caregiverResponse': caregiverResponse,
         'replacementRequested': replacementRequested,
         'replacementReason': replacementReason,
+        'pendingConfirmCaregiverId': pendingConfirmCaregiverId,
+        'confirmDeadlineMs': confirmDeadlineMs,
+        'broadcastRadius': broadcastRadius,
+        'jobAcceptances': jobAcceptances.map((e) => e.toMap()).toList(),
       };
 
   Booking copyWith({
@@ -283,6 +352,10 @@ class Booking extends Equatable {
     String? replacementReason,
     List<String>? rejectedBy,
     List<String>? appliedCaregivers,
+    String? pendingConfirmCaregiverId,
+    int? confirmDeadlineMs,
+    double? broadcastRadius,
+    List<JobAcceptance>? jobAcceptances,
   }) =>
       Booking(
         id: id,
@@ -325,6 +398,11 @@ class Booking extends Equatable {
         caregiverResponse: caregiverResponse ?? this.caregiverResponse,
         replacementRequested: replacementRequested ?? this.replacementRequested,
         replacementReason: replacementReason ?? this.replacementReason,
+        pendingConfirmCaregiverId:
+            pendingConfirmCaregiverId ?? this.pendingConfirmCaregiverId,
+        confirmDeadlineMs: confirmDeadlineMs ?? this.confirmDeadlineMs,
+        broadcastRadius: broadcastRadius ?? this.broadcastRadius,
+        jobAcceptances: jobAcceptances ?? this.jobAcceptances,
       );
 
   bool get isActive => status == BookingStatus.inProgress;

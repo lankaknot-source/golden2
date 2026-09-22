@@ -94,6 +94,7 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen>
               .where((b) =>
                   b.status == BookingStatus.pending ||
                   b.status == BookingStatus.broadcasted ||
+                  b.status == BookingStatus.broadcastAccepted ||
                   b.status == BookingStatus.accepted)
               .toList();
           final active =
@@ -303,6 +304,52 @@ class _BookingCard extends ConsumerWidget {
                   ],
                 ),
 
+                // Broadcast queue confirmation (shared with the Android
+                // client). A primary caregiver confirms attendance before
+                // the backend locks the job and issues the start code.
+                if (isCaregiver) ...[
+                  ...(() {
+                    final own = booking.jobAcceptances
+                        .where((a) => a.caregiverId == user.uid)
+                        .toList();
+                    if (own.isEmpty ||
+                        own.first.confirmationStatus != 'PENDING' ||
+                        !own.first.isPrimary) {
+                      return <Widget>[];
+                    }
+                    return <Widget>[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            try {
+                              await ref
+                                  .read(bookingRepositoryProvider)
+                                  .confirmPreJobAttendance(
+                                      booking.id, user.uid);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Attendance confirmed.')),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Could not confirm: $e')),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.event_available_rounded),
+                          label: const Text('Confirm attendance'),
+                        ),
+                      ),
+                    ];
+                  })(),
+                ],
+
                 // ── Start code section (accepted status) ──────────────────
                 if (booking.status == BookingStatus.accepted) ...[
                   const SizedBox(height: 12),
@@ -502,6 +549,8 @@ class _BookingCard extends ConsumerWidget {
           (AppColors.statusPending, Icons.schedule_rounded),
         BookingStatus.broadcasted =>
           (AppColors.warning, Icons.broadcast_on_personal_rounded),
+        BookingStatus.broadcastAccepted =>
+          (AppColors.warning, Icons.how_to_reg_rounded),
         BookingStatus.accepted =>
           (AppColors.statusActive, Icons.check_circle_outline_rounded),
         BookingStatus.inProgress => (AppColors.accent, Icons.favorite_rounded),
@@ -518,6 +567,7 @@ class _BookingCard extends ConsumerWidget {
   String _statusLabel(BookingStatus s) => switch (s) {
         BookingStatus.pending => 'Pending',
         BookingStatus.broadcasted => 'Broadcasted',
+        BookingStatus.broadcastAccepted => 'Awaiting confirmation',
         BookingStatus.accepted => 'Accepted',
         BookingStatus.inProgress => 'Active',
         BookingStatus.completed => 'Completed',

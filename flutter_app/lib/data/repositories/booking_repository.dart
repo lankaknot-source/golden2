@@ -38,10 +38,14 @@ class BookingRepository {
 
   Stream<List<Booking>> streamCaregiverBookings(String caregiverId) {
     return _col
-        .where('caregiverId', isEqualTo: caregiverId)
-        .orderBy('requestedTime', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => Booking.fromMap(d.data(), d.id)).toList());
+        .map((s) => s.docs
+            .map((d) => Booking.fromMap(d.data(), d.id))
+            .where((b) => b.caregiverId == caregiverId ||
+                b.appliedCaregivers.contains(caregiverId) ||
+                b.jobAcceptances.any((a) => a.caregiverId == caregiverId))
+            .toList()
+          ..sort((a, b) => b.requestedTime.compareTo(a.requestedTime)));
   }
 
   // Job feed: BROADCASTED + PENDING jobs for caregiver to browse
@@ -84,6 +88,11 @@ class BookingRepository {
 
   // Caregiver accepts a broadcasted job
   Future<void> acceptJob(String bookingId, String caregiverId, double hourlyRate) async {
+    final current = await _col.doc(bookingId).get();
+    if ((current.data()?['status'] as String?) == 'BROADCASTED') {
+      await acceptBroadcastJob(bookingId, caregiverId, hourlyRate);
+      return;
+    }
     final code = _generateCode();
     await _col.doc(bookingId).update({
       'caregiverId': caregiverId,
@@ -97,6 +106,71 @@ class BookingRepository {
         .collection(AppConstants.usersCollection)
         .doc(caregiverId)
         .update({'isBusy': true});
+  }
+
+  /// Atomically joins the Android/iOS broadcast queue (maximum four
+  /// caregivers). The first caregiver is marked primary; the matching
+  /// confirmation workers on the backend can later promote a backup.
+  Future<void> acceptBroadcastJob(
+    String bookingId,
+    String caregiverId,
+    double hourlyRate,
+  ) async {
+    final bookingRef = _col.doc(bookingId);
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(bookingRef);
+      if (!snap.exists) throw StateError('Booking no longer exists');
+      final data = snap.data()!;
+      final status = data['status'] as String? ?? 'PENDING';
+      if (status != 'PENDING' && status != 'BROADCASTED') {
+        throw StateError('This job is no longer available');
+      }
+      final existing = (data['jobAcceptances'] as List? ?? [])
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+      if (existing.any((e) => e['caregiverId'] == caregiverId)) {
+        throw StateError('You have already accepted this job');
+      }
+      if (existing.length >= 4) throw StateError('All caregiver slots are full');
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final acceptance = {
+        'caregiverId': caregiverId,
+        'acceptedAt': now,
+        'acceptanceOrder': existing.length,
+        'isPrimary': existing.isEmpty,
+        'confirmationStatus': 'PENDING',
+      };
+      final updated = [...existing, acceptance];
+      tx.update(bookingRef, {
+        'jobAcceptances': updated,
+        'appliedCaregivers': FieldValue.arrayUnion([caregiverId]),
+        'hourlyRate': hourlyRate,
+        'status': updated.length >= 4 ? 'BROADCAST_ACCEPTED' : 'BROADCASTED',
+      });
+    });
+    await _firestore.collection(AppConstants.usersCollection).doc(caregiverId).update({
+      'isBusy': true,
+    });
+  }
+
+  /// Records the primary caregiver's attendance confirmation. The backend
+  /// confirmation worker resolves the booking and generates the start code.
+  Future<void> confirmPreJobAttendance(String bookingId, String caregiverId) async {
+    final bookingRef = _col.doc(bookingId);
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(bookingRef);
+      if (!snap.exists) throw StateError('Booking no longer exists');
+      final entries = (snap.data()?['jobAcceptances'] as List? ?? [])
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+      final index = entries.indexWhere((e) => e['caregiverId'] == caregiverId);
+      if (index < 0) throw StateError('You are not assigned to this job');
+      entries[index]['confirmationStatus'] = 'CONFIRMED';
+      tx.update(bookingRef, {'jobAcceptances': entries});
+    });
   }
 
   // Caregiver rejects a PENDING (direct) job

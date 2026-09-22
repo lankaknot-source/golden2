@@ -1302,6 +1302,7 @@ class _BookingTile extends StatelessWidget {
   (Color, IconData) _statusStyle(BookingStatus s) => switch (s) {
         BookingStatus.pending => (AppColors.statusPending, Icons.schedule_rounded),
         BookingStatus.broadcasted => (AppColors.statusPending, Icons.broadcast_on_personal_rounded),
+        BookingStatus.broadcastAccepted => (AppColors.statusPending, Icons.how_to_reg_rounded),
         BookingStatus.accepted => (AppColors.statusActive, Icons.check_circle_outline_rounded),
         BookingStatus.inProgress => (AppColors.accent, Icons.favorite_rounded),
         BookingStatus.completed => (AppColors.statusCompleted, Icons.task_alt_rounded),
@@ -1313,6 +1314,7 @@ class _BookingTile extends StatelessWidget {
   String _statusLabel(BookingStatus s) => switch (s) {
         BookingStatus.pending => 'Pending',
         BookingStatus.broadcasted => 'Open',
+        BookingStatus.broadcastAccepted => 'Awaiting confirmation',
         BookingStatus.accepted => 'Accepted',
         BookingStatus.inProgress => 'Active',
         BookingStatus.completed => 'Done',
@@ -1877,6 +1879,7 @@ class _BookingsTabState extends ConsumerState<_BookingsTab>
               .where((b) =>
                   b.status == BookingStatus.pending ||
                   b.status == BookingStatus.broadcasted ||
+                  b.status == BookingStatus.broadcastAccepted ||
                   b.status == BookingStatus.accepted)
               .toList();
           final active = bookings
@@ -2064,6 +2067,7 @@ class _BookingCard extends StatelessWidget {
   (Color, IconData) _statusStyle(BookingStatus s) => switch (s) {
         BookingStatus.pending => (AppColors.statusPending, Icons.schedule_rounded),
         BookingStatus.broadcasted => (AppColors.statusPending, Icons.broadcast_on_personal_rounded),
+        BookingStatus.broadcastAccepted => (AppColors.statusPending, Icons.how_to_reg_rounded),
         BookingStatus.accepted => (AppColors.statusActive, Icons.check_circle_outline_rounded),
         BookingStatus.inProgress => (AppColors.accent, Icons.favorite_rounded),
         BookingStatus.completed => (AppColors.statusCompleted, Icons.task_alt_rounded),
@@ -2075,6 +2079,7 @@ class _BookingCard extends StatelessWidget {
   String _statusLabel(BookingStatus s) => switch (s) {
         BookingStatus.pending => 'Pending',
         BookingStatus.broadcasted => 'Open',
+        BookingStatus.broadcastAccepted => 'Awaiting confirmation',
         BookingStatus.accepted => 'Accepted',
         BookingStatus.inProgress => 'Active',
         BookingStatus.completed => 'Done',

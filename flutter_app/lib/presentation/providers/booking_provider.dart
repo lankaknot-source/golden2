@@ -73,6 +73,17 @@ class BookingNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 
+  Future<void> confirmPreJobAttendance(
+      String bookingId, String caregiverId) async {
+    state = const AsyncValue.loading();
+    try {
+      await _repo.confirmPreJobAttendance(bookingId, caregiverId);
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
   Future<void> rejectJob(
       String bookingId, String caregiverId, bool isBroadcasted) async {
     state = const AsyncValue.loading();
