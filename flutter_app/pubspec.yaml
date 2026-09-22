@@ -1,66 +1,158 @@
-```yaml
-name: golden_hand_care
-description: "A new Flutter project."
-publish_to: 'none'
+workflows:
+  ios-test-unsigned:
+    name: iOS Test Build Unsigned
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    working_directory: flutter_app
 
-version: 1.0.0+1
+    environment:
+      flutter: 3.41.2
+      xcode: 16.2
+      cocoapods: 1.16.2
 
-environment:
-  sdk: '>=3.3.4 <4.0.0'
+    scripts:
+      - name: Install Flutter dependencies
+        script: |
+          set -e
+          flutter config --no-enable-swift-package-manager
+          flutter pub get --enforce-lockfile
 
-dependencies:
-  flutter:
-    sdk: flutter
+      - name: Validate Flutter project
+        script: |
+          set -e
+          flutter analyze --no-pub --no-fatal-infos
+          flutter test --no-pub
+          python3 -B -m unittest discover -s tool -p 'test_*.py'
+          python3 tool/check_ios_configuration.py
 
-  cupertino_icons: ^1.0.6
+      - name: Patch legacy Firebase iOS headers
+        script: |
+          set -e
+          python3 tool/patch_firebase_ios.py
 
-  # Firebase
-  firebase_core: ^2.32.0
-  firebase_auth: ^4.17.5
-  cloud_firestore: ^4.14.0
+      - name: Apply iOS Firebase build settings
+        script: |
+          set -e
+          python3 tool/configure_ios_firebase.py
 
-  # Maps & Location
-  flutter_map: any
-  latlong2: any
-  geolocator: any
+      - name: Verify iOS Firebase configuration
+        script: |
+          set -e
+          test -f ios/Podfile
+          grep -q "use_frameworks! :linkage => :static" ios/Podfile
+          grep -q "use_modular_headers!" ios/Podfile
+          grep -q "CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES" ios/Podfile
+          grep -q "DEFINES_MODULE" ios/Podfile
+          echo "Firebase iOS configuration verified."
 
-  # State management / Dependency injection
-  provider: any
-  get_it: any
+      - name: Install CocoaPods dependencies
+        script: |
+          set -e
+          cd ios
+          rm -rf Pods
+          rm -f Podfile.lock
+          pod deintegrate || true
+          pod install --repo-update
+          cd ..
 
-  # Images
-  cached_network_image: any
+      - name: Build iOS without code signing
+        script: |
+          set -e
+          flutter clean
+          flutter build ios --release --no-codesign --build-number="${BUILD_NUMBER:-1}"
 
-  # Google Sign-In
-  google_sign_in: ^5.3.3
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+      - ios/Podfile.lock
+      - /tmp/xcodebuild_logs/*.log
 
-  # Background tasks
-  workmanager: any
+  ios-appstore:
+    name: iOS App Store TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    working_directory: flutter_app
 
-  # UI / Navigation
-  lottie: any
-  go_router: any
+    integrations:
+      app_store_connect: CodemagicAppStoreConnect
 
-  # Utilities
-  url_launcher: ^6.3.1
-  intl: any
-  uuid: any
+    environment:
+      flutter: 3.41.2
+      xcode: 16.2
+      cocoapods: 1.16.2
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.kina.care
 
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
+    scripts:
+      - name: Install Flutter dependencies
+        script: |
+          set -e
+          flutter config --no-enable-swift-package-manager
+          flutter pub get --enforce-lockfile
 
-  flutter_lints: ^3.0.0
+      - name: Validate Flutter project
+        script: |
+          set -e
+          flutter analyze --no-pub --no-fatal-infos
+          flutter test --no-pub
+          python3 -B -m unittest discover -s tool -p 'test_*.py'
+          python3 tool/check_ios_configuration.py
 
-flutter:
-  config:
-    enable-swift-package-manager: false
+      - name: Patch legacy Firebase iOS headers
+        script: |
+          set -e
+          python3 tool/patch_firebase_ios.py
 
-  uses-material-design: true
+      - name: Apply iOS Firebase build settings
+        script: |
+          set -e
+          python3 tool/configure_ios_firebase.py
 
-  assets:
-    - assets/brand_logo.jpeg
+      - name: Set release bundle identifier
+        script: |
+          set -e
+          sed -i '' -E 's/com\.kina\.[A-Za-z0-9_-]+/com.kina.care/g' ios/Runner.xcodeproj/project.pbxproj
+          python3 tool/check_ios_configuration.py
 
-dependency_overrides:
-  google_sign_in_ios: 5.5.0
-```
+      - name: Verify iOS Firebase configuration
+        script: |
+          set -e
+          test -f ios/Podfile
+          grep -q "use_frameworks! :linkage => :static" ios/Podfile
+          grep -q "use_modular_headers!" ios/Podfile
+          grep -q "CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES" ios/Podfile
+          grep -q "DEFINES_MODULE" ios/Podfile
+          echo "Firebase iOS configuration verified."
+
+      - name: Install CocoaPods dependencies
+        script: |
+          set -e
+          cd ios
+          rm -rf Pods
+          rm -f Podfile.lock
+          pod deintegrate || true
+          pod install --repo-update
+          cd ..
+
+      - name: Configure automatic code signing
+        script: |
+          set -e
+          xcode-project use-profiles
+
+      - name: Build signed IPA
+        script: |
+          set -e
+          flutter clean
+          flutter build ipa --release --build-number="${BUILD_NUMBER:-1}" --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
+      - ios/Podfile.lock
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
