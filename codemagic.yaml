@@ -57,7 +57,7 @@ workflows:
     working_directory: flutter_app
 
     integrations:
-      app_store_connect: CodemagicAppStoreConnect
+      app_store_connect: golden
 
     environment:
       ios_signing:
