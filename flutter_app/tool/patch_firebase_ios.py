@@ -8,6 +8,13 @@ from urllib.parse import urljoin, urlparse
 from urllib.request import url2pathname
 
 
+# Kept for compatibility with the existing project tests.
+AUTH_IMPORT = """#if __has_include(<FirebaseAuth/FirebaseAuth.h>)
+#import <FirebaseAuth/FirebaseAuth.h>
+#endif
+"""
+
+
 def patch_package(package_root, module):
     classes = package_root / "ios" / "Classes"
 
@@ -21,16 +28,14 @@ def patch_package(package_root, module):
         original = source.read_text(encoding="utf-8")
         patched = original
 
-        # Replace:
-        # #import <Firebase/Firebase.h>
-        #
+        # Replace the legacy Firebase umbrella import
         # with the specific Firebase module header.
         patched = patched.replace(
             "#import <Firebase/Firebase.h>",
             f"#import <{module}/{module}.h>",
         )
 
-        # Firebase Auth uses FIRAuth types.
+        # Firebase Auth may use FIRAuth types.
         if module == "FirebaseAuth" and "FIRAuth" in patched:
             auth_import = "#import <FirebaseAuth/FirebaseAuth.h>"
 
@@ -61,9 +66,7 @@ def main():
         for package in data["packages"]
     }
 
-    # Your app uses only:
-    #   firebase_auth
-    #   cloud_firestore
+    # This project uses Firebase Auth and Cloud Firestore.
     packages_to_patch = (
         ("firebase_auth", "FirebaseAuth"),
         ("cloud_firestore", "FirebaseFirestore"),
