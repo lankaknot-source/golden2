@@ -28,31 +28,32 @@ def patch_package(package_root, module):
         original = source.read_text(encoding="utf-8")
         patched = original
 
-        # Replace the legacy Firebase umbrella import
-        # with the specific Firebase module header.
+        # Replace legacy Firebase umbrella imports.
         patched = patched.replace(
             "#import <Firebase/Firebase.h>",
             f"#import <{module}/{module}.h>",
         )
 
-        # Cloud Firestore uses FIRApp.
-        # FirebaseCore provides the full FIRApp declaration,
-        # including properties such as "name".
-        if module == "FirebaseFirestore" and "FIRApp" in patched:
-            core_import = "#import <FirebaseCore/FirebaseCore.h>"
-
-            if core_import not in patched:
-                patched = core_import + "\n\n" + patched
-
-        # Firebase Auth may use FIRAuth types.
+        # Firebase Auth uses FIRAuth types.
         if module == "FirebaseAuth" and "FIRAuth" in patched:
             auth_import = "#import <FirebaseAuth/FirebaseAuth.h>"
 
             if auth_import not in patched:
                 patched = auth_import + "\n\n" + patched
 
-        # Keep the existing Firebase Messaging Auth notification
-        # handler behavior required by the project's tests.
+        # cloud_firestore-4.17.5 uses FIRApp.name in this file.
+        # FIRApp is fully declared by FirebaseCore.
+        if (
+            module == "FirebaseFirestore"
+            and source.name == "FLTFirebaseFirestoreUtils.m"
+        ):
+            core_import = "#import <FirebaseCore/FirebaseCore.h>"
+
+            if core_import not in patched:
+                patched = core_import + "\n\n" + patched
+
+        # Keep the existing Firebase Messaging Auth handler behavior
+        # required by the project's tests.
         if source.name == "FLTFirebaseMessagingPlugin.m":
             if AUTH_IMPORT not in patched:
                 anchor = '#import "FLTFirebaseMessagingPlugin.h"\n'
