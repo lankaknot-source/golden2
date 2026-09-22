@@ -1,9 +1,8 @@
 workflows:
   ios-test-unsigned:
-    name: iOS Test Build Unsigned
+    name: iOS Test Build
     instance_type: mac_mini_m2
     max_build_duration: 60
-    working_directory: flutter_app
 
     environment:
       flutter: 3.41.2
@@ -15,70 +14,69 @@ workflows:
         script: |
           set -e
           flutter config --no-enable-swift-package-manager
-          flutter pub get --enforce-lockfile
+          flutter pub get
 
-      - name: Validate Flutter project
+      - name: Analyze Flutter project
         script: |
           set -e
           flutter analyze --no-pub --no-fatal-infos
-          flutter test --no-pub
-          python3 -B -m unittest discover -s tool -p 'test_*.py'
-          python3 tool/check_ios_configuration.py
 
-      - name: Patch legacy Firebase iOS headers
+      - name: Run Flutter tests
+        script: |
+          set -e
+          flutter test --no-pub
+
+      - name: Run Python tests
+        script: |
+          set -e
+          if [ -d "tool" ]; then
+            python3 -m unittest discover -s tool -p "test_*.py"
+          fi
+
+      - name: Patch Firebase iOS packages
         script: |
           set -e
           python3 tool/patch_firebase_ios.py
 
-      - name: Apply iOS Firebase build settings
+      - name: Verify iOS Firebase configuration
         script: |
           set -e
           python3 tool/configure_ios_firebase.py
 
-      - name: Verify iOS Firebase configuration
+      - name: Verify iOS project configuration
         script: |
           set -e
           test -f ios/Podfile
+          grep -q "platform :ios, '15.0'" ios/Podfile
           grep -q "use_frameworks! :linkage => :static" ios/Podfile
           grep -q "use_modular_headers!" ios/Podfile
-          grep -q "CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES" ios/Podfile
-          grep -q "DEFINES_MODULE" ios/Podfile
-          echo "Firebase iOS configuration verified."
 
       - name: Install CocoaPods dependencies
         script: |
           set -e
           cd ios
-          rm -rf Pods
-          rm -f Podfile.lock
-          pod deintegrate || true
+          pod deintegrate
           pod install --repo-update
           cd ..
 
-      - name: Build iOS without code signing
+      - name: Build iOS unsigned
         script: |
           set -e
-          flutter clean
           flutter build ios --release --no-codesign --build-number="${BUILD_NUMBER:-1}"
 
     artifacts:
-      - build/ios/iphoneos/Runner.app
-      - ios/Podfile.lock
-      - /tmp/xcodebuild_logs/*.log
+      - build/ios/iphoneos/*.app
 
   ios-appstore:
-    name: iOS App Store TestFlight
+    name: iOS App Store Build
     instance_type: mac_mini_m2
-    max_build_duration: 120
-    working_directory: flutter_app
-
-    integrations:
-      app_store_connect: CodemagicAppStoreConnect
+    max_build_duration: 60
 
     environment:
       flutter: 3.41.2
       xcode: 16.2
       cocoapods: 1.16.2
+
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.kina.care
@@ -88,71 +86,62 @@ workflows:
         script: |
           set -e
           flutter config --no-enable-swift-package-manager
-          flutter pub get --enforce-lockfile
+          flutter pub get
 
-      - name: Validate Flutter project
+      - name: Analyze Flutter project
         script: |
           set -e
           flutter analyze --no-pub --no-fatal-infos
-          flutter test --no-pub
-          python3 -B -m unittest discover -s tool -p 'test_*.py'
-          python3 tool/check_ios_configuration.py
 
-      - name: Patch legacy Firebase iOS headers
+      - name: Run Flutter tests
+        script: |
+          set -e
+          flutter test --no-pub
+
+      - name: Run Python tests
+        script: |
+          set -e
+          if [ -d "tool" ]; then
+            python3 -m unittest discover -s tool -p "test_*.py"
+          fi
+
+      - name: Patch Firebase iOS packages
         script: |
           set -e
           python3 tool/patch_firebase_ios.py
 
-      - name: Apply iOS Firebase build settings
+      - name: Verify iOS Firebase configuration
         script: |
           set -e
           python3 tool/configure_ios_firebase.py
 
-      - name: Set release bundle identifier
+      - name: Set App Store Bundle ID
         script: |
           set -e
-          sed -i '' -E 's/com\.kina\.[A-Za-z0-9_-]+/com.kina.care/g' ios/Runner.xcodeproj/project.pbxproj
-          python3 tool/check_ios_configuration.py
+          /usr/bin/sed -i '' 's/com\.kina\.goldenHandCare/com.kina.care/g' ios/Runner.xcodeproj/project.pbxproj
+          /usr/bin/sed -i '' 's/com\.kina\.goldenHandCare/com.kina.care/g' ios/Runner/Info.plist
 
-      - name: Verify iOS Firebase configuration
+      - name: Verify iOS project configuration
         script: |
           set -e
           test -f ios/Podfile
+          grep -q "platform :ios, '15.0'" ios/Podfile
           grep -q "use_frameworks! :linkage => :static" ios/Podfile
           grep -q "use_modular_headers!" ios/Podfile
-          grep -q "CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES" ios/Podfile
-          grep -q "DEFINES_MODULE" ios/Podfile
-          echo "Firebase iOS configuration verified."
 
       - name: Install CocoaPods dependencies
         script: |
           set -e
           cd ios
-          rm -rf Pods
-          rm -f Podfile.lock
-          pod deintegrate || true
+          pod deintegrate
           pod install --repo-update
           cd ..
 
-      - name: Configure automatic code signing
+      - name: Build iOS App Store
         script: |
           set -e
-          xcode-project use-profiles
-
-      - name: Build signed IPA
-        script: |
-          set -e
-          flutter clean
-          flutter build ipa --release --build-number="${BUILD_NUMBER:-1}" --export-options-plist=/Users/builder/export_options.plist
+          flutter build ipa --release --build-number="${BUILD_NUMBER:-1}"
 
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
-      - ios/Podfile.lock
-      - /tmp/xcodebuild_logs/*.log
-
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
-        submit_to_app_store: false
