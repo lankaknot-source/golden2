@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 
 import '../../data/repositories/auth_repository.dart';
 import '../../data/services/notification_service.dart';
+import '../../core/firebase_bootstrap.dart';
 import '../../domain/models/user_model.dart';
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -34,6 +36,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repo;
 
   AuthNotifier(this._repo) : super(const AuthLoading()) {
+    unawaited(_start());
+  }
+
+  Future<void> _start() async {
+    try {
+      await ensureFirebaseInitialized();
+    } catch (_) {
+      state = const AuthUnauthenticated();
+      return;
+    }
     _repo.authStateChanges.listen((firebaseUser) async {
       if (firebaseUser == null) {
         state = const AuthUnauthenticated();
