@@ -8,12 +8,39 @@ workflows:
       xcode: 16.2
       cocoapods: 1.16.2
     scripts:
-      - name: Install Flutter dependencies
-        script: |
-          set -e
-          cd "$CM_BUILD_DIR"
-          flutter config --no-enable-swift-package-manager
-          flutter pub get
+      ```
+  - name: Install Flutter dependencies
+    script: |
+      set -e
+
+      echo "=== BUILD DIRECTORY ==="
+      pwd
+      echo "CM_BUILD_DIR=$CM_BUILD_DIR"
+
+      echo "=== SEARCHING FOR PUBSPEC.YAML ==="
+      find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print
+
+      PROJECT_DIR=$(dirname "$(find "$CM_BUILD_DIR" -name pubspec.yaml -type f -print -quit)")
+
+      if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/pubspec.yaml" ]; then
+        echo "ERROR: pubspec.yaml was not found."
+        exit 1
+      fi
+
+      echo "=== FLUTTER PROJECT FOUND ==="
+      echo "$PROJECT_DIR"
+
+      cd "$PROJECT_DIR"
+
+      echo "=== PROJECT ROOT ==="
+      pwd
+
+      ls -la
+
+      flutter config --no-enable-swift-package-manager
+      flutter pub get
+```
+
 
       - name: Analyze Flutter project
         script: |
