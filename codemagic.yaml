@@ -46,7 +46,9 @@ workflows:
             --build-number="$BUILD_NUMBER"
 
     artifacts:
+      - build/ios/iphoneos/Runner.app
       - flutter_app/build/ios/iphoneos/Runner.app
+      - ios/Podfile.lock
       - flutter_app/ios/Podfile.lock
       - /tmp/xcodebuild_logs/*.log
 
@@ -108,8 +110,11 @@ workflows:
             --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
+      - build/ios/ipa/*.ipa
       - flutter_app/build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
       - flutter_app/build/ios/archive/*.xcarchive
+      - ios/Podfile.lock
       - flutter_app/ios/Podfile.lock
       - /tmp/xcodebuild_logs/*.log
 
