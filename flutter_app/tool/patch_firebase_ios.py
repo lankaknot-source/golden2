@@ -14,6 +14,15 @@ FIREBASE_MODULES = {
     "firebase_messaging": "FirebaseMessaging",
 }
 
+# These are the Firebase plugins that this application currently uses.  The
+# remaining entries are optional because older lockfiles or transitive plugins
+# can leave them out of package_config.json.
+REQUIRED_FIREBASE_PLUGINS = {
+    "firebase_core",
+    "firebase_auth",
+    "cloud_firestore",
+}
+
 
 AUTH_IMPORT = """#if __has_include(<FirebaseAuth/FirebaseAuth.h>)
 #import <FirebaseAuth/FirebaseAuth.h>
@@ -58,7 +67,16 @@ def main():
     config = Path(__file__).resolve().parents[1] / ".dart_tool/package_config.json"
     packages = {p["name"]: p for p in json.loads(config.read_text())["packages"]}
     for name, module in FIREBASE_MODULES.items():
-        root_uri = urlparse(urljoin(config.as_uri(), packages[name]["rootUri"]))
+        package = packages.get(name)
+        if package is None:
+            if name in REQUIRED_FIREBASE_PLUGINS:
+                raise RuntimeError(
+                    f"Required Firebase plugin {name!r} is missing from package_config.json. "
+                    "Run flutter pub get before patching."
+                )
+            print(f"Skipping optional Firebase plugin {name}: not in package_config.json")
+            continue
+        root_uri = urlparse(urljoin(config.as_uri(), package["rootUri"]))
         if root_uri.scheme != "file" or root_uri.netloc:
             raise RuntimeError(f"Unsupported package URI: {root_uri.geturl()}")
         patch_package(Path(url2pathname(root_uri.path)), module)
