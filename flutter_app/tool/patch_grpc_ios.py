@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import re
+import stat
 
 
 def patch_grpc_header(project_root: Path) -> bool:
@@ -33,6 +34,9 @@ def patch_grpc_header(project_root: Path) -> bool:
         print(f"gRPC-Core header already compatible: {header}")
         return False
 
+    # CocoaPods can materialize cached pod sources as read-only files on CI.
+    # Make only this generated dependency header writable before patching it.
+    header.chmod(header.stat().st_mode | stat.S_IWUSR)
     header.write_text(patched, encoding="utf-8")
     print(f"Patched gRPC-Core for modern Clang: {header}")
     return True
