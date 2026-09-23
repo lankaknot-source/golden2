@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/firebase_bootstrap.dart';
+import '../../firebase_options.dart';
 import '../../domain/models/user_model.dart';
 
 class AuthRepository {
@@ -14,7 +17,12 @@ class AuthRepository {
   FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   GoogleSignIn? _gsInstance;
   GoogleSignIn get _googleSignIn => _gsInstance ??= GoogleSignIn(
-        clientId: '283184840115-dh6l2j6f0u3ov03nih26slfi4i832ev6.apps.googleusercontent.com',
+        // The iOS OAuth client is different from Android's client. Passing
+        // the Android ID to GoogleSignIn on iOS causes the native sign-in
+        // flow to fail before it can return a result.
+        clientId: defaultTargetPlatform == TargetPlatform.iOS
+            ? DefaultFirebaseOptions.ios.iosClientId
+            : '283184840115-dh6l2j6f0u3ov03nih26slfi4i832ev6.apps.googleusercontent.com',
       );
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -30,6 +38,7 @@ class AuthRepository {
   }
 
   Future<UserModel> signInWithGoogle() async {
+    await ensureFirebaseInitialized();
     final UserCredential userCredential;
     if (kIsWeb) {
       // Web: Firebase handles the OAuth flow directly via a popup.
