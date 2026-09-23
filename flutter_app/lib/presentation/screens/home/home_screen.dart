@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../data/services/notification_service.dart';
@@ -13,6 +14,10 @@ import '../../../domain/models/user_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/user_provider.dart';
+
+Future<void> _openLegalPage(String url) async {
+  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+}
 
 // ── Promo banner provider ─────────────────────────────────────────────────────
 
@@ -2251,10 +2256,17 @@ class _ProfileTab extends ConsumerWidget {
                     items: [
                       _ProfileItem(Icons.settings_outlined, 'Settings',
                           () => context.push('/settings')),
-                      _ProfileItem(
-                          Icons.help_outline_rounded, 'Help & Support', null),
-                      _ProfileItem(
-                          Icons.privacy_tip_outlined, 'Privacy Policy', null),
+                      _ProfileItem(Icons.help_outline_rounded, 'Help & Support',
+                          () => _openLegalPage('mailto:support@kinacare.lk')),
+                      _ProfileItem(Icons.description_outlined,
+                          'Terms & Conditions', () => _openLegalPage(
+                              'https://www.postkina.online/terms.html')),
+                      _ProfileItem(Icons.privacy_tip_outlined, 'Privacy Policy',
+                          () => _openLegalPage(
+                              'https://www.postkina.online/privacy.html')),
+                      _ProfileItem(Icons.currency_exchange_rounded,
+                          'Refund Policy', () => _openLegalPage(
+                              'https://www.postkina.online/refund.html')),
                     ],
                   ),
                   const SizedBox(height: 12),

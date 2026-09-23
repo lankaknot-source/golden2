@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,6 +26,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _scrollCtrl = ScrollController();
   bool _isSending = false;
   bool _isUploadingImage = false;
+  bool _blocked = false;
 
   @override
   void dispose() {
@@ -139,6 +141,69 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  Future<void> _showSafetyMenu() async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.flag_outlined, color: AppColors.error),
+            title: const Text('Report this conversation'),
+            onTap: () => Navigator.pop(sheetContext, 'report'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.block_rounded, color: AppColors.error),
+            title: const Text('Block this user'),
+            onTap: () => Navigator.pop(sheetContext, 'block'),
+          ),
+        ]),
+      ),
+    );
+    if (!mounted || action == null) return;
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('chats')
+          .where('bookingId', isEqualTo: widget.bookingId)
+          .limit(50)
+          .get();
+      final otherId = snapshot.docs
+          .map((d) => d.data()['senderId'] as String?)
+          .whereType<String>()
+          .firstWhere((id) => id != user.uid, orElse: () => '');
+
+      if (action == 'report') {
+        await FirebaseFirestore.instance.collection('chat_reports').add({
+          'bookingId': widget.bookingId,
+          'reporterId': user.uid,
+          'reportedUserId': otherId.isEmpty ? null : otherId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'status': 'OPEN',
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Report submitted. Our team will review it.')));
+        }
+      } else if (action == 'block' && otherId.isNotEmpty) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'blockedUserIds': FieldValue.arrayUnion([otherId]),
+        }, SetOptions(merge: true));
+        if (mounted) {
+          setState(() => _blocked = true);
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('User blocked.')));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Unable to complete this action: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider)!;
@@ -157,6 +222,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Safety options',
+            onPressed: _showSafetyMenu,
+            icon: const Icon(Icons.more_vert_rounded),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -228,12 +300,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               error: (e, _) => Center(child: Text('Error: $e')),
             ),
           ),
-          _InputBar(
-            controller: _msgCtrl,
-            isSending: _isSending,
-            onSend: _send,
-            onImageTap: _showImageSourceSheet,
-          ),
+          if (_blocked)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('You blocked this user.',
+                  style: TextStyle(color: AppColors.error)),
+            )
+          else
+            _InputBar(
+              controller: _msgCtrl,
+              isSending: _isSending,
+              onSend: _send,
+              onImageTap: _showImageSourceSheet,
+            ),
         ],
       ),
     );

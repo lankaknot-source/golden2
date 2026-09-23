@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/validators.dart';
@@ -57,9 +58,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       final user = ref.read(currentUserProvider)!;
       final url = await StorageService().uploadFile(File(image.path), 'profiles/${user.uid}');
-      setState(() => _photoUrl = url);
+      if (mounted) setState(() => _photoUrl = url);
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -146,6 +147,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           backgroundColor: AppColors.error,
         ));
       }
+    }
+  }
+
+  Future<void> _openLegal(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open this page')),
+      );
     }
   }
 
@@ -326,6 +336,47 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+
+              _FieldCard(
+                child: Column(
+                  children: [
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Legal & Policies',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Poppins')),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.description_outlined,
+                          color: AppColors.primary),
+                      title: const Text('Terms & Conditions'),
+                      onTap: () => _openLegal(
+                          'https://www.postkina.online/terms.html'),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.privacy_tip_outlined,
+                          color: AppColors.primary),
+                      title: const Text('Privacy Policy'),
+                      onTap: () => _openLegal(
+                          'https://www.postkina.online/privacy.html'),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.currency_exchange_rounded,
+                          color: AppColors.primary),
+                      title: const Text('Refund Policy'),
+                      onTap: () => _openLegal(
+                          'https://www.postkina.online/refund.html'),
+                    ),
+                  ],
+                ),
+              ),
 
               if (_isEditing)
                 SizedBox(
