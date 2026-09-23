@@ -137,7 +137,10 @@ class _ClientKycScreenState extends ConsumerState<ClientKycScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider)!;
-    final isLocked = user.kycStatus == KycStatus.approved;
+    // Client details are always editable. Only caregiver/nurse KYC is a
+    // reviewed, locked workflow; a stale client PENDING value must not disable
+    // the Next or Submit buttons.
+    const isLocked = false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
