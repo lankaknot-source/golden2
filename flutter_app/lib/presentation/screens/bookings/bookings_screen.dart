@@ -206,6 +206,10 @@ class _BookingCard extends ConsumerWidget {
     final fmt = DateFormat('d MMM yyyy');
     final (color, icon) = _statusStyle(booking.status);
     final isCaregiver = user.isCaregiverOrNurse;
+    final hasAcceptedThisJob = booking.jobAcceptances
+        .any((acceptance) => acceptance.caregiverId == user.uid);
+    final canEnterStartCode = isCaregiver &&
+        (booking.caregiverId == user.uid || hasAcceptedThisJob);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -353,17 +357,19 @@ class _BookingCard extends ConsumerWidget {
                 ],
 
                 // ── Start code section (accepted status) ──────────────────
-                if (booking.status == BookingStatus.accepted ||
-                    (isCaregiver && booking.caregiverId == user.uid &&
-                        (booking.status == BookingStatus.broadcasted ||
-                            booking.status == BookingStatus.broadcastAccepted))) ...[
+                if ((!isCaregiver && booking.status == BookingStatus.accepted) ||
+                    (canEnterStartCode &&
+                        booking.status != BookingStatus.inProgress &&
+                        booking.status != BookingStatus.completed &&
+                        booking.status != BookingStatus.cancelled)) ...[
                   const SizedBox(height: 12),
                   const Divider(height: 1),
                   const SizedBox(height: 12),
                   if (!isCaregiver)
                     _StartCodeClientView(booking: booking)
                   else
-                    _StartCodeCaregiverEntry(booking: booking),
+                    _StartCodeCaregiverEntry(
+                        booking: booking, caregiverId: user.uid),
                 ],
 
                 // ── Active booking actions ────────────────────────────────
@@ -1078,7 +1084,11 @@ class _StartCodeClientView extends ConsumerWidget {
 
 class _StartCodeCaregiverEntry extends ConsumerStatefulWidget {
   final Booking booking;
-  const _StartCodeCaregiverEntry({required this.booking});
+  final String caregiverId;
+  const _StartCodeCaregiverEntry({
+    required this.booking,
+    required this.caregiverId,
+  });
 
   @override
   ConsumerState<_StartCodeCaregiverEntry> createState() =>
@@ -1100,14 +1110,14 @@ class _StartCodeCaregiverEntryState
           final ok = await ref
               .read(bookingNotifierProvider.notifier)
               .verifyAndStartJob(widget.booking.id, code);
-          if (ok && widget.booking.caregiverId != null) {
+          if (ok) {
             // Start immediately after the client code is verified. The global
             // Riverpod watcher also keeps this alive after the booking stream
             // refreshes, while this call avoids waiting for that refresh
             // before the first location permission prompt/fix.
             try {
               await LocationTrackingService()
-                  .startForCaregiver(widget.booking.caregiverId!);
+                  .startForCaregiver(widget.caregiverId);
             } catch (_) {
               // A denied location prompt must not undo a successfully started
               // job. The provider will retry when permissions are enabled.
