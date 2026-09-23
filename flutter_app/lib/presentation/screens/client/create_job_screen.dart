@@ -453,7 +453,12 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                                 color: AppColors.textSecondary,
                                 fontFamily: 'Poppins')),
                         trailing: TextButton(
-                          onPressed: () => context.push('/elder-profile'),
+                          onPressed: () async {
+                            await context.push('/elder-profile');
+                            if (mounted) {
+                              ref.invalidate(_elderProfilesProvider(user.uid));
+                            }
+                          },
                           child: const Text('Add'),
                         ),
                       ),
@@ -498,7 +503,27 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                       ),
                     ),
               loading: () => const _CardShimmer(),
-              error: (_, _) => const SizedBox.shrink(),
+              error: (error, _) => _Card(
+                child: ListTile(
+                  leading: const Icon(Icons.error_outline_rounded,
+                      color: AppColors.error),
+                  title: const Text('Could not load elder profiles',
+                      style: TextStyle(fontSize: 14, fontFamily: 'Poppins')),
+                  subtitle: Text(
+                    error.toString(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                        fontFamily: 'Poppins'),
+                  ),
+                  trailing: TextButton(
+                    onPressed: () => ref.invalidate(_elderProfilesProvider(user.uid)),
+                    child: const Text('Retry'),
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
 
