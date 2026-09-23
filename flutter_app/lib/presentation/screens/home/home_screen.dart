@@ -1230,7 +1230,10 @@ class _BookingTile extends StatelessWidget {
     final (color, icon) = _statusStyle(booking.status);
     final fmt = DateFormat('d MMM');
 
-    return Container(
+    return InkWell(
+      onTap: () => context.push('/bookings'),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1296,6 +1299,7 @@ class _BookingTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -1972,7 +1976,9 @@ class _BookingCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => context.push('/care-log/${booking.id}'),
+          // Open the full booking card (including start-code controls) from
+          // the home bookings tab.
+          onTap: () => context.push('/bookings'),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
