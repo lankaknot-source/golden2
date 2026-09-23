@@ -73,11 +73,19 @@ class BookingRepository {
 
   // Active/accepted bookings for caregiver
   Stream<List<Booking>> streamCaregiverActiveBookings(String caregiverId) {
-    return _col
-        .where('caregiverId', isEqualTo: caregiverId)
-        .where('status', whereIn: ['ACCEPTED', 'IN_PROGRESS'])
-        .snapshots()
-        .map((s) => s.docs.map((d) => Booking.fromMap(d.data(), d.id)).toList());
+    // Use the same client-side stream as the caregiver bookings screen so a
+    // broadcast acceptance is visible immediately as well.  Broadcast jobs
+    // are initially stored in `jobAcceptances` before the primary caregiver
+    // is promoted to `caregiverId` by the transaction below.
+    return streamCaregiverBookings(caregiverId).map((bookings) => bookings
+        .where((booking) =>
+            (booking.caregiverId == caregiverId &&
+                (booking.status == BookingStatus.accepted ||
+                    booking.status == BookingStatus.inProgress)) ||
+            (booking.jobAcceptances.any((a) => a.caregiverId == caregiverId) &&
+                (booking.status == BookingStatus.broadcasted ||
+                    booking.status == BookingStatus.broadcastAccepted)))
+        .toList());
   }
 
   Future<void> updateBooking(String id, Map<String, dynamic> data) =>
@@ -143,12 +151,25 @@ class BookingRepository {
         'confirmationStatus': 'PENDING',
       };
       final updated = [...existing, acceptance];
-      tx.update(bookingRef, {
+      final update = <String, dynamic>{
         'jobAcceptances': updated,
         'appliedCaregivers': FieldValue.arrayUnion([caregiverId]),
         'hourlyRate': hourlyRate,
         'status': updated.length >= 4 ? 'BROADCAST_ACCEPTED' : 'BROADCASTED',
-      });
+      };
+
+      // The first caregiver is the primary assignment. Persisting the
+      // assignment here makes the accepted job appear in the caregiver's
+      // active bookings and gives the client a concrete caregiver to start.
+      if (existing.isEmpty) {
+        update.addAll({
+          'caregiverId': caregiverId,
+          'status': 'ACCEPTED',
+          'acceptedAt': now,
+          'startCode': _generateCode(),
+        });
+      }
+      tx.update(bookingRef, update);
     });
     await _firestore.collection(AppConstants.usersCollection).doc(caregiverId).update({
       'isBusy': true,

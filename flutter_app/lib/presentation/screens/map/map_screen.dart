@@ -82,7 +82,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _locationSub = ref.onValue.listen((event) {
       final data = event.snapshot.value;
       if (data == null) return;
-      final map = Map<String, dynamic>.from(data as Map);
+      if (data is! Map) return;
+      final map = Map<String, dynamic>.from(data);
       final lat = (map['lat'] as num?)?.toDouble();
       final lng = (map['lng'] as num?)?.toDouble();
       if (lat == null || lng == null) return;
@@ -209,7 +210,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 initialCameraPosition: CameraPosition(target: jobLatLng, zoom: 15),
                 markers: _markers,
                 polylines: _polylines,
-                myLocationEnabled: true,
+                // This screen tracks the caregiver, so it must not request
+                // the viewer's location just to render the map. Enabling the
+                // blue-dot without a granted permission can crash the iOS
+                // Google Maps platform view.
+                myLocationEnabled: false,
                 myLocationButtonEnabled: false,
                 zoomControlsEnabled: false,
                 mapToolbarEnabled: false,

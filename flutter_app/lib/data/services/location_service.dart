@@ -34,7 +34,11 @@ class LocationService {
     if (permission == LocationPermission.whileInUse) {
       permission = await Geolocator.requestPermission();
     }
-    return permission == LocationPermission.always;
+    // iOS may grant only While In Use on the first prompt. That permission is
+    // still sufficient to start tracking while the caregiver is using the
+    // app; a later prompt/settings change can upgrade it to Always.
+    return permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
   }
 
   Future<Position?> getCurrentPosition() async {

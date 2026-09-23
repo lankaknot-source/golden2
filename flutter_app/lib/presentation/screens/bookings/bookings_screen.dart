@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/stored_image.dart';
+import '../../../data/services/location_tracking_service.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../domain/models/booking_model.dart';
 import '../../../domain/models/user_model.dart';
@@ -1096,6 +1097,19 @@ class _StartCodeCaregiverEntryState
           final ok = await ref
               .read(bookingNotifierProvider.notifier)
               .verifyAndStartJob(widget.booking.id, code);
+          if (ok && widget.booking.caregiverId != null) {
+            // Start immediately after the client code is verified. The global
+            // Riverpod watcher also keeps this alive after the booking stream
+            // refreshes, while this call avoids waiting for that refresh
+            // before the first location permission prompt/fix.
+            try {
+              await LocationTrackingService()
+                  .startForCaregiver(widget.booking.caregiverId!);
+            } catch (_) {
+              // A denied location prompt must not undo a successfully started
+              // job. The provider will retry when permissions are enabled.
+            }
+          }
           if (mounted) {
             setState(() => _loading = false);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
