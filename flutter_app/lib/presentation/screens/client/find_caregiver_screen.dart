@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/stored_image.dart';
 import '../../../domain/models/user_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
@@ -313,7 +314,7 @@ class _CaregiverCard extends ConsumerWidget {
                     CircleAvatar(
                       radius: 32,
                       backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                      backgroundImage: c.profileImageUrl != null ? NetworkImage(c.profileImageUrl!) : null,
+                      backgroundImage: c.profileImageUrl != null ? storedImageProvider(c.profileImageUrl!) : null,
                       child: c.profileImageUrl == null
                           ? Text(
                               c.name.isNotEmpty ? c.name[0].toUpperCase() : 'C',
@@ -564,7 +565,7 @@ class _CaregiverProfileSheet extends StatelessWidget {
                           CircleAvatar(
                             radius: 36,
                             backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                            backgroundImage: c.profileImageUrl != null ? NetworkImage(c.profileImageUrl!) : null,
+                            backgroundImage: c.profileImageUrl != null ? storedImageProvider(c.profileImageUrl!) : null,
                             child: c.profileImageUrl == null
                                 ? Text(
                                     c.name.isNotEmpty ? c.name[0].toUpperCase() : 'C',

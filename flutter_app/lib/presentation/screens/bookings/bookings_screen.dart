@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/stored_image.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../domain/models/booking_model.dart';
 import '../../../domain/models/user_model.dart';
@@ -1527,7 +1528,7 @@ class _TaskProofsClientView extends ConsumerWidget {
                             Uri.parse(proof.photoUrl).data!.contentAsBytes(),
                             width: 52, height: 52, fit: BoxFit.cover)
                         : proof.photoUrl.isNotEmpty
-                            ? Image.network(proof.photoUrl,
+                            ? Image(image: storedImageProvider(proof.photoUrl),
                                 width: 52, height: 52, fit: BoxFit.cover)
                             : Container(
                                 width: 52, height: 52,
@@ -1580,7 +1581,7 @@ class _TaskProofsClientView extends ConsumerWidget {
       builder: (_) => Dialog(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.network(url),
+          child: Image(image: storedImageProvider(url)),
         ),
       ),
     );

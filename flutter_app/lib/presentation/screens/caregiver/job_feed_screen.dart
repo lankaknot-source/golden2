@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/stored_image.dart';
 import '../../../data/services/notification_service.dart';
 import '../../../domain/models/booking_model.dart';
 import '../../../domain/models/elder_profile_model.dart';
@@ -236,7 +237,7 @@ class _CaregiverHeader extends StatelessWidget {
               child: CircleAvatar(
                 radius: 26,
                 backgroundColor: Colors.white.withValues(alpha: 0.2),
-                backgroundImage: user.profileImageUrl != null ? NetworkImage(user.profileImageUrl!) : null,
+                backgroundImage: user.profileImageUrl != null ? storedImageProvider(user.profileImageUrl!) : null,
                 child: user.profileImageUrl == null
                     ? Text(
                         user.name.isNotEmpty ? user.name[0].toUpperCase() : 'C',

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/stored_image.dart';
 import '../../../data/services/notification_service.dart';
 import '../../../domain/models/booking_model.dart';
 import '../../../domain/models/user_model.dart';
@@ -386,7 +387,7 @@ class _ImageBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Image.network(url, fit: BoxFit.cover, width: double.infinity),
+        child: Image(image: storedImageProvider(url), fit: BoxFit.cover, width: double.infinity),
       ),
     );
   }
@@ -587,7 +588,7 @@ class _SuperCaregiverCard extends StatelessWidget {
                 radius: 32,
                 backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                 backgroundImage: user.profileImageUrl != null
-                    ? NetworkImage(user.profileImageUrl!)
+                    ? storedImageProvider(user.profileImageUrl!)
                     : null,
                 child: user.profileImageUrl == null
                     ? Text(
@@ -846,7 +847,7 @@ class _ClientSliverHeader extends StatelessWidget {
                 radius: 26,
                 backgroundColor: Colors.white.withValues(alpha: 0.2),
                 backgroundImage: user.profileImageUrl != null
-                    ? NetworkImage(user.profileImageUrl!)
+                    ? storedImageProvider(user.profileImageUrl!)
                     : null,
                 child: user.profileImageUrl == null
                     ? Text(
@@ -1535,7 +1536,7 @@ class _CaregiverSliverHeader extends StatelessWidget {
                 radius: 26,
                 backgroundColor: Colors.white.withValues(alpha: 0.2),
                 backgroundImage: user.profileImageUrl != null
-                    ? NetworkImage(user.profileImageUrl!)
+                    ? storedImageProvider(user.profileImageUrl!)
                     : null,
                 child: user.profileImageUrl == null
                     ? Text(
@@ -2120,7 +2121,7 @@ class _ProfileTab extends ConsumerWidget {
                     radius: 42,
                     backgroundColor: Colors.white.withValues(alpha: 0.2),
                     backgroundImage: user.profileImageUrl != null
-                        ? NetworkImage(user.profileImageUrl!)
+                    ? storedImageProvider(user.profileImageUrl!)
                         : null,
                     child: user.profileImageUrl == null
                         ? Text(

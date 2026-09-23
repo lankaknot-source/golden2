@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/utils/stored_image.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../domain/models/user_model.dart';
 import '../../providers/auth_provider.dart';
@@ -219,7 +220,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     CircleAvatar(
                       radius: 52,
                       backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                      backgroundImage: _photoUrl != null ? NetworkImage(_photoUrl!) : null,
+                      backgroundImage: _photoUrl != null ? storedImageProvider(_photoUrl!) : null,
                       child: _photoUrl == null
                           ? Text(
                               user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',

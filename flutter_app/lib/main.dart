@@ -9,6 +9,16 @@ import 'data/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase-backed Riverpod providers are created while the first widget
+  // tree is built. Initialize Firebase before that tree exists; otherwise
+  // iOS can render a blank/white screen with "No Firebase App [DEFAULT]".
+  try {
+    await ensureFirebaseInitialized().timeout(const Duration(seconds: 8));
+  } catch (e, stackTrace) {
+    debugPrint('Firebase startup error: $e\n$stackTrace');
+  }
+
   runApp(const ProviderScope(child: CareApp()));
 
   // Do not block the first Flutter frame on iOS notification permission or

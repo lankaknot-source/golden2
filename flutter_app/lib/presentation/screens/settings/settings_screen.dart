@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/stored_image.dart';
 import '../../../domain/models/user_model.dart';
 import '../../providers/auth_provider.dart';
 
@@ -143,7 +144,7 @@ class SettingsScreen extends ConsumerWidget {
             icon: Icons.info_outline_rounded,
             iconColor: AppColors.textSecondary,
             title: 'App Version',
-            subtitle: '1.3.1 (build 12)',
+            subtitle: '1.3.1 (build 15)',
             onTap: null,
           ),
           const SizedBox(height: 8),
@@ -629,7 +630,7 @@ class _ProfileCard extends StatelessWidget {
             radius: 32,
             backgroundColor: Colors.white24,
             backgroundImage:
-                user.profileImageUrl != null ? NetworkImage(user.profileImageUrl!) : null,
+                user.profileImageUrl != null ? storedImageProvider(user.profileImageUrl!) : null,
             child: user.profileImageUrl == null
                 ? Text(
                     user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',

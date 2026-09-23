@@ -1,53 +1,38 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path/path.dart' as p;
-import 'package:uuid/uuid.dart';
 
+/// Encodes attachments for Firestore instead of Firebase Storage.
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  static const _uuid = Uuid();
-
   Future<String> uploadImage(
     File file,
     String folder, {
-    int quality = 75,
-    int maxWidth = 1080,
+    int quality = 70,
+    int maxWidth = 1280,
   }) async {
-    final Uint8List bytes;
-    // flutter_image_compress only works on Android/iOS/macOS
-    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-      final compressed = await FlutterImageCompress.compressWithFile(
-        file.absolute.path,
-        quality: quality,
-        minWidth: maxWidth,
-      );
-      bytes = compressed ?? await file.readAsBytes();
-    } else {
-      bytes = await file.readAsBytes();
-    }
-    final ext = p.extension(file.path).isNotEmpty ? p.extension(file.path) : '.jpg';
-    final fileName = '${_uuid.v4()}$ext';
-    final ref = _storage.ref('$folder/$fileName');
-    final task = ref.putData(bytes);
-    final snapshot = await task;
-    return snapshot.ref.getDownloadURL();
+    final compressed = await FlutterImageCompress.compressWithFile(
+      file.absolute.path,
+      quality: quality,
+      minWidth: maxWidth,
+      format: CompressFormat.jpeg,
+    );
+    final bytes = compressed ?? await file.readAsBytes();
+    return _dataUrl(bytes, 'image/jpeg');
   }
 
   Future<String> uploadFile(File file, String folder) async {
-    final fileName = '${_uuid.v4()}_${p.basename(file.path)}';
-    final ref = _storage.ref('$folder/$fileName');
-    final task = ref.putFile(file);
-    final snapshot = await task;
-    return snapshot.ref.getDownloadURL();
+    final ext = p.extension(file.path).toLowerCase();
+    final isImage = {'.jpg', '.jpeg', '.png', '.webp', '.heic'}.contains(ext);
+    if (isImage) return uploadImage(file, folder);
+    final bytes = await file.readAsBytes();
+    return _dataUrl(bytes, _mimeType(ext));
   }
 
-  Future<void> deleteFile(String downloadUrl) async {
-    final ref = _storage.refFromURL(downloadUrl);
-    await ref.delete();
-  }
+  /// Firestore owns the data now; there is no remote Storage object to delete.
+  Future<void> deleteFile(String downloadUrl) async {}
 
   Future<List<String>> uploadMultipleImages(
     List<File> files,
@@ -56,4 +41,16 @@ class StorageService {
     final futures = files.map((f) => uploadImage(f, folder));
     return Future.wait(futures);
   }
+
+  String _dataUrl(Uint8List bytes, String mimeType) =>
+      'data:$mimeType;base64,${base64Encode(bytes)}';
+
+  String _mimeType(String extension) => switch (extension) {
+        '.pdf' => 'application/pdf',
+        '.txt' => 'text/plain',
+        '.doc' => 'application/msword',
+        '.docx' =>
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        _ => 'application/octet-stream',
+      };
 }
