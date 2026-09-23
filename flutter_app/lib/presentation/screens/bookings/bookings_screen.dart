@@ -360,10 +360,11 @@ class _BookingCard extends ConsumerWidget {
                   const SizedBox(height: 12),
                   const Divider(height: 1),
                   const SizedBox(height: 12),
-                  _StartCodeClientView(booking: booking),
-                  const SizedBox(height: 8),
-                  _StartCodeCaregiverEntry(
-                      booking: booking, caregiverId: user.uid),
+                  if (isCaregiver)
+                    _StartCodeCaregiverEntry(
+                        booking: booking, caregiverId: user.uid)
+                  else
+                    _StartCodeClientView(booking: booking),
                 ],
 
                 // ── Active booking actions ────────────────────────────────
