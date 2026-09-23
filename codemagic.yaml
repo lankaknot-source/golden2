@@ -15,7 +15,9 @@ workflows:
         script: |
           set -euo pipefail
           flutter config --no-enable-swift-package-manager
-          flutter pub get --enforce-lockfile
+          # Allow pub to refresh the lockfile after removing Firebase Storage.
+          # The committed lockfile may still contain transitive storage entries.
+          flutter pub get
 
       - name: Validate Flutter project
         script: |
@@ -48,7 +50,7 @@ workflows:
           flutter build ios \
             --release \
             --no-codesign \
-            --build-number="${BUILD_NUMBER:-15}"
+            --build-number="${BUILD_NUMBER:-16}"
 
     artifacts:
       - build/ios/iphoneos/Runner.app
@@ -116,7 +118,7 @@ workflows:
           set -euo pipefail
           flutter build ipa \
             --release \
-            --build-number="${BUILD_NUMBER:-15}" \
+            --build-number="${BUILD_NUMBER:-16}" \
             --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:

@@ -144,7 +144,7 @@ class SettingsScreen extends ConsumerWidget {
             icon: Icons.info_outline_rounded,
             iconColor: AppColors.textSecondary,
             title: 'App Version',
-            subtitle: '1.3.1 (build 15)',
+            subtitle: '1.3.1 (build 16)',
             onTap: null,
           ),
           const SizedBox(height: 8),
