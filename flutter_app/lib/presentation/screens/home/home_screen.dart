@@ -698,11 +698,6 @@ class _ClientHomeTab extends ConsumerWidget {
           slivers: [
             _ClientSliverHeader(user: user, lang: lang),
 
-            if (user.kycStatus == KycStatus.pending ||
-                user.kycStatus == KycStatus.rejected)
-              SliverToBoxAdapter(
-                child: _KycBanner(status: user.kycStatus, isCaregiver: false),
-              ),
 
             SliverToBoxAdapter(child: _KycMeetingBanner(user: user)),
 
@@ -2223,7 +2218,7 @@ class _ProfileTab extends ConsumerWidget {
                           () => context.push('/profile')),
                       _ProfileItem(
                         Icons.verified_user_outlined,
-                        'Verification',
+                        isCaregiver ? 'Verification' : 'Client Details',
                         () => context.push(isCaregiver
                             ? '/caregiver-verification'
                             : '/client-kyc'),

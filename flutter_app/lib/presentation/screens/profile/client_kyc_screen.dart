@@ -102,8 +102,11 @@ class _ClientKycScreenState extends ConsumerState<ClientKycScreen> {
               .where((s) => s.isNotEmpty)
               .join(', ');
 
+      // Client details are informational and do not require manual review.
+      // Keep the verification workflow for caregivers/nurses only.
       await ref.read(userRepositoryProvider).updateUser(user.uid, {
-        'kycStatus': KycStatus.pending.name,
+        'kycStatus': KycStatus.approved.name.toUpperCase(),
+        'isVerified': true,
         'nicNumber': _nicCtrl.text.trim(),
         'dob': _dob?.toIso8601String(),
         'gender': _gender,
@@ -114,7 +117,7 @@ class _ClientKycScreenState extends ConsumerState<ClientKycScreen> {
       });
 
       if (mounted) {
-        _snack('Verification submitted! Under review.');
+        _snack('Your details were submitted and your account is approved.');
         context.pop();
       }
     } catch (e) {
@@ -134,13 +137,12 @@ class _ClientKycScreenState extends ConsumerState<ClientKycScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider)!;
-    final isLocked = user.kycStatus == KycStatus.pending ||
-        user.kycStatus == KycStatus.approved;
+    final isLocked = user.kycStatus == KycStatus.approved;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Client Verification'),
+        title: const Text('Client Details'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: _prev,
@@ -157,17 +159,11 @@ class _ClientKycScreenState extends ConsumerState<ClientKycScreen> {
               color: AppColors.error,
               text: 'Your previous submission was rejected. Please re-submit.',
             ),
-          if (user.kycStatus == KycStatus.pending)
-            _Banner(
-              icon: Icons.hourglass_top_rounded,
-              color: AppColors.warning,
-              text: 'Verification submitted and under review.',
-            ),
           if (user.kycStatus == KycStatus.approved)
             _Banner(
               icon: Icons.verified_rounded,
               color: AppColors.accent,
-              text: 'Your account is fully verified!',
+              text: 'Your details are saved and your account is approved.',
             ),
 
           Expanded(
@@ -855,7 +851,7 @@ class _BottomBar extends StatelessWidget {
                       color: Colors.white, strokeWidth: 2.5),
                 )
               : Text(
-                  step < totalSteps - 1 ? 'Next' : 'Submit Verification',
+                  step < totalSteps - 1 ? 'Next' : 'Submit Details',
                   style: const TextStyle(
                       fontSize: 16, fontFamily: 'Poppins'),
                 ),

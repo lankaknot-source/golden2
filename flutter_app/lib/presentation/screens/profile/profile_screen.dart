@@ -341,8 +341,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.verified_user_outlined, color: AppColors.primary),
-                  title: const Text(
-                    'Verification Status',
+                  title: Text(
+                    user.isCaregiverOrNurse ? 'Verification Status' : 'Client Details',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
