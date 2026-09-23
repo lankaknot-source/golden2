@@ -231,7 +231,8 @@ class BookingRepository {
       final doc = await tx.get(bookingRef);
       final data = doc.data();
       final stored = data?['startCode'] as String?;
-      if (!doc.exists || stored == null || stored != enteredCode) return;
+      if (!doc.exists || stored == null ||
+          stored.toUpperCase() != enteredCode.trim().toUpperCase()) return;
       final status = data?['status'] as String?;
       if (status != 'ACCEPTED' && status != 'BROADCASTED' &&
           status != 'BROADCAST_ACCEPTED') return;

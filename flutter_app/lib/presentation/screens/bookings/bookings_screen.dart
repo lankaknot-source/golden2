@@ -1161,7 +1161,7 @@ class _StartCodeCaregiverEntryState
   }
 }
 
-// ── 4-digit OTP dialog ────────────────────────────────────────────────────────
+// ── Start code dialog: one letter + four digits ──────────────────────────────
 
 class _OtpDialog extends StatefulWidget {
   final Future<void> Function(String code) onSubmit;
@@ -1172,8 +1172,8 @@ class _OtpDialog extends StatefulWidget {
 }
 
 class _OtpDialogState extends State<_OtpDialog> {
-  final _controllers = List.generate(4, (_) => TextEditingController());
-  final _focusNodes = List.generate(4, (_) => FocusNode());
+  final _controllers = List.generate(5, (_) => TextEditingController());
+  final _focusNodes = List.generate(5, (_) => FocusNode());
   bool _submitting = false;
 
   @override
@@ -1191,7 +1191,7 @@ class _OtpDialogState extends State<_OtpDialog> {
 
   Future<void> _submit() async {
     final code = _code;
-    if (code.length < 4) return;
+    if (code.length < 5) return;
     setState(() => _submitting = true);
     await widget.onSubmit(code);
     if (mounted) setState(() => _submitting = false);
@@ -1224,7 +1224,7 @@ class _OtpDialogState extends State<_OtpDialog> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Ask the client for the 4-digit code\nto begin the session.',
+            'Ask the client for the letter + 4-digit code\nto begin the session.',
             style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -1236,7 +1236,7 @@ class _OtpDialogState extends State<_OtpDialog> {
       ),
       content: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(4, (i) {
+        children: List.generate(5, (i) {
           return SizedBox(
             width: 52,
             height: 60,
@@ -1244,7 +1244,10 @@ class _OtpDialogState extends State<_OtpDialog> {
               controller: _controllers[i],
               focusNode: _focusNodes[i],
               textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
+              keyboardType: i == 0 ? TextInputType.text : TextInputType.number,
+              textCapitalization: i == 0
+                  ? TextCapitalization.characters
+                  : TextCapitalization.none,
               maxLength: 1,
               style: const TextStyle(
                   fontSize: 24,
@@ -1263,15 +1266,19 @@ class _OtpDialogState extends State<_OtpDialog> {
                 filled: true,
                 fillColor: AppColors.primary.withValues(alpha: 0.04),
               ),
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                i == 0
+                    ? FilteringTextInputFormatter.allow(RegExp('[A-Za-z]'))
+                    : FilteringTextInputFormatter.digitsOnly,
+              ],
               onChanged: (val) {
-                if (val.isNotEmpty && i < 3) {
+                if (val.isNotEmpty && i < 4) {
                   _focusNodes[i + 1].requestFocus();
                 } else if (val.isEmpty && i > 0) {
                   _focusNodes[i - 1].requestFocus();
                 }
                 setState(() {});
-                if (_code.length == 4) _submit();
+                if (_code.length == 5) _submit();
               },
             ),
           );
@@ -1290,7 +1297,7 @@ class _OtpDialogState extends State<_OtpDialog> {
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10)),
           ),
-          onPressed: (_code.length < 4 || _submitting) ? null : _submit,
+          onPressed: (_code.length < 5 || _submitting) ? null : _submit,
           child: _submitting
               ? const SizedBox(
                   width: 18,
