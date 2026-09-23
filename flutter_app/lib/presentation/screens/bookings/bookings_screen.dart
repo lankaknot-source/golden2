@@ -353,7 +353,10 @@ class _BookingCard extends ConsumerWidget {
                 ],
 
                 // ── Start code section (accepted status) ──────────────────
-                if (booking.status == BookingStatus.accepted) ...[
+                if (booking.status == BookingStatus.accepted ||
+                    (isCaregiver && booking.caregiverId == user.uid &&
+                        (booking.status == BookingStatus.broadcasted ||
+                            booking.status == BookingStatus.broadcastAccepted))) ...[
                   const SizedBox(height: 12),
                   const Divider(height: 1),
                   const SizedBox(height: 12),

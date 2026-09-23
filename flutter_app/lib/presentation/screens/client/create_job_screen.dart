@@ -50,6 +50,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
   double? _lat;
   double? _lng;
   bool _fetchingLocation = false;
+  bool _useFullPrice = false;
 
   // Care category
   String _careCategory = 'Elderly Care';
@@ -164,15 +165,21 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
   }
 
   Future<void> _pickMapLocation() async {
-    final picked = await Navigator.of(context).push<LatLng>(
-      MaterialPageRoute(
-        builder: (_) => _MapLocationPicker(
-          initial: _lat != null && _lng != null
-              ? LatLng(_lat!, _lng!)
-              : null,
+    LatLng? picked;
+    try {
+      picked = await Navigator.of(context).push<LatLng>(
+        MaterialPageRoute(
+          builder: (_) => _MapLocationPicker(
+            initial: _lat != null && _lng != null
+                ? LatLng(_lat!, _lng!)
+                : null,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (_) {
+      _snack('Could not open map. Check Google Maps configuration.');
+      return;
+    }
     if (picked == null || !mounted) return;
     setState(() {
       _lat = picked.latitude;
@@ -204,11 +211,12 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
     }
 
     final user = ref.read(currentUserProvider)!;
-    final rate = double.tryParse(_rateCtrl.text.trim()) ?? 0;
+    final enteredPrice = double.tryParse(_rateCtrl.text.trim()) ?? 0;
     final startHours = _startTime.hour + _startTime.minute / 60;
     final endHours = _endTime.hour + _endTime.minute / 60;
     final hours = (endHours - startHours).clamp(0, 24).toDouble();
-    final total = rate * hours;
+    final total = _useFullPrice ? enteredPrice : enteredPrice * hours;
+    final rate = _useFullPrice && hours > 0 ? total / hours : enteredPrice;
 
     final address = _addressCtrl.text.trim().isEmpty
         ? ''
@@ -663,18 +671,38 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                       ),
                     ),
                   const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: ChoiceChip(
+                        label: const Text('Hourly rate'),
+                        selected: !_useFullPrice,
+                        onSelected: (_) => setState(() => _useFullPrice = false),
+                      )),
+                      Expanded(child: ChoiceChip(
+                        label: const Text('Full job price'),
+                        selected: _useFullPrice,
+                        onSelected: (_) => setState(() => _useFullPrice = true),
+                      )),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
                   TextFormField(
                     controller: _rateCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Hourly Rate (LKR)',
+                    decoration: InputDecoration(
+                      labelText: _useFullPrice
+                          ? 'Full Job Price (LKR)'
+                          : 'Hourly Rate (LKR)',
                       prefixIcon: Icon(Icons.payments_outlined),
                       border: OutlineInputBorder(),
                     ),
                     style: const TextStyle(fontFamily: 'Poppins'),
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Required';
-                      if (double.tryParse(v) == null) return 'Invalid amount';
+                      final amount = double.tryParse(v);
+                      if (amount == null || amount <= 0) {
+                        return 'Enter a valid amount';
+                      }
                       return null;
                     },
                   ),
@@ -836,8 +864,10 @@ class _MapLocationPickerState extends State<_MapLocationPicker> {
         children: [
           GoogleMap(
             initialCameraPosition: CameraPosition(target: center, zoom: 13),
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
+            // The client can place a pin without granting location permission;
+            // current-location selection is handled by the separate button.
+            myLocationEnabled: false,
+            myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
             onTap: (point) => setState(() => _selected = point),
             markers: {
