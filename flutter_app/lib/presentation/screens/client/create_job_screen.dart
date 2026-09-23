@@ -181,11 +181,12 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
       return;
     }
     if (picked == null || !mounted) return;
+    final selected = picked;
     setState(() {
-      _lat = picked.latitude;
-      _lng = picked.longitude;
+      _lat = selected.latitude;
+      _lng = selected.longitude;
       _addressCtrl.text =
-          'Map pin: ${picked.latitude.toStringAsFixed(5)}, ${picked.longitude.toStringAsFixed(5)}';
+          'Map pin: ${selected.latitude.toStringAsFixed(5)}, ${selected.longitude.toStringAsFixed(5)}';
     });
   }
 
