@@ -206,10 +206,9 @@ class _BookingCard extends ConsumerWidget {
     final fmt = DateFormat('d MMM yyyy');
     final (color, icon) = _statusStyle(booking.status);
     final isCaregiver = user.isCaregiverOrNurse;
-    // Caregiver bookings are already scoped by the repository. Once an
-    // accepted job is in that list, always show the code entry action; the
-    // repository still verifies the exact stored code before starting.
-    final canEnterStartCode = isCaregiver;
+    final isAcceptedJob = booking.status == BookingStatus.accepted ||
+        booking.status == BookingStatus.broadcasted ||
+        booking.status == BookingStatus.broadcastAccepted;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -357,19 +356,14 @@ class _BookingCard extends ConsumerWidget {
                 ],
 
                 // ── Start code section (accepted status) ──────────────────
-                if ((!isCaregiver && booking.status == BookingStatus.accepted) ||
-                    (canEnterStartCode &&
-                        (booking.status == BookingStatus.accepted ||
-                            booking.status == BookingStatus.broadcasted ||
-                            booking.status == BookingStatus.broadcastAccepted))) ...[
+                if (isAcceptedJob) ...[
                   const SizedBox(height: 12),
                   const Divider(height: 1),
                   const SizedBox(height: 12),
-                  if (!isCaregiver)
-                    _StartCodeClientView(booking: booking)
-                  else
-                    _StartCodeCaregiverEntry(
-                        booking: booking, caregiverId: user.uid),
+                  _StartCodeClientView(booking: booking),
+                  const SizedBox(height: 8),
+                  _StartCodeCaregiverEntry(
+                      booking: booking, caregiverId: user.uid),
                 ],
 
                 // ── Active booking actions ────────────────────────────────
@@ -1109,7 +1103,8 @@ class _StartCodeCaregiverEntryState
           setState(() => _loading = true);
           final ok = await ref
               .read(bookingNotifierProvider.notifier)
-              .verifyAndStartJob(widget.booking.id, code);
+              .verifyAndStartJob(widget.booking.id, code,
+                  caregiverId: widget.caregiverId);
           if (ok) {
             // Start immediately after the client code is verified. The global
             // Riverpod watcher also keeps this alive after the booking stream

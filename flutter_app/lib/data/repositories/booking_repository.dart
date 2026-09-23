@@ -220,15 +220,32 @@ class BookingRepository {
     return '$letter$digits';
   }
 
-  Future<bool> verifyAndStartJob(String bookingId, String enteredCode) async {
-    final doc = await _col.doc(bookingId).get();
-    final stored = doc.data()?['startCode'] as String?;
-    if (stored == null || stored != enteredCode) return false;
-    await _col.doc(bookingId).update({
-      'status': 'IN_PROGRESS',
-      'startTime': DateTime.now().millisecondsSinceEpoch,
+  Future<bool> verifyAndStartJob(
+    String bookingId,
+    String enteredCode, {
+    String? caregiverId,
+  }) async {
+    final bookingRef = _col.doc(bookingId);
+    var started = false;
+    await _firestore.runTransaction((tx) async {
+      final doc = await tx.get(bookingRef);
+      final data = doc.data();
+      final stored = data?['startCode'] as String?;
+      if (!doc.exists || stored == null || stored != enteredCode) return;
+      final status = data?['status'] as String?;
+      if (status != 'ACCEPTED' && status != 'BROADCASTED' &&
+          status != 'BROADCAST_ACCEPTED') return;
+      final update = <String, dynamic>{
+        'status': 'IN_PROGRESS',
+        'startTime': DateTime.now().millisecondsSinceEpoch,
+      };
+      if (caregiverId != null && caregiverId.isNotEmpty) {
+        update['caregiverId'] = caregiverId;
+      }
+      tx.update(bookingRef, update);
+      started = true;
     });
-    return true;
+    return started;
   }
 
   Future<void> addTaskProof(String bookingId, TaskProofEntry proof) =>

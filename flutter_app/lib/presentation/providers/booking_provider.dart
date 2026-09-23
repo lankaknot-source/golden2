@@ -103,10 +103,12 @@ class BookingNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  Future<bool> verifyAndStartJob(String bookingId, String code) async {
+  Future<bool> verifyAndStartJob(String bookingId, String code,
+      {String? caregiverId}) async {
     state = const AsyncValue.loading();
     try {
-      final ok = await _repo.verifyAndStartJob(bookingId, code);
+      final ok = await _repo.verifyAndStartJob(bookingId, code,
+          caregiverId: caregiverId);
       state = const AsyncValue.data(null);
       return ok;
     } catch (e, st) {
