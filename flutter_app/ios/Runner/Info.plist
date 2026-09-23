@@ -72,7 +72,11 @@
 	<key>GIDClientID</key>
 	<string>283184840115-hrrokdp8qbig9p9ql816tohgk8l3pf11.apps.googleusercontent.com</string>
 	<key>GMSApiKey</key>
-	<string>$(GOOGLE_MAPS_API_KEY)</string>
+	<!-- The Firebase iOS configuration contains the public client API key used
+	     by the enabled Google Maps SDK. Keeping a concrete value here ensures
+	     the native map is initialized even when Codemagic has no optional
+	     GOOGLE_MAPS_API_KEY environment variable configured. -->
+	<string>AIzaSyDR6c28pS01jO_DQkx9DVA1tk_fuQeGV-w</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
