@@ -2260,13 +2260,13 @@ class _ProfileTab extends ConsumerWidget {
                           () => _openLegalPage('mailto:support@kinacare.lk')),
                       _ProfileItem(Icons.description_outlined,
                           'Terms & Conditions', () => _openLegalPage(
-                              'https://www.postkina.online/terms.html')),
+                              'https://ykingtech.github.io/GOLDEN-HAND-CAREGIVER/terms.html')),
                       _ProfileItem(Icons.privacy_tip_outlined, 'Privacy Policy',
                           () => _openLegalPage(
-                              'https://www.postkina.online/privacy.html')),
+                              'https://ykingtech.github.io/GOLDEN-HAND-CAREGIVER/privacy.html')),
                       _ProfileItem(Icons.currency_exchange_rounded,
                           'Refund Policy', () => _openLegalPage(
-                              'https://www.postkina.online/refund.html')),
+                              'https://ykingtech.github.io/GOLDEN-HAND-CAREGIVER/refund.html')),
                     ],
                   ),
                   const SizedBox(height: 12),

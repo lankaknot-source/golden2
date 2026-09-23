@@ -71,6 +71,8 @@
 	<!-- ===================================================================== -->
 	<key>GIDClientID</key>
 	<string>283184840115-hrrokdp8qbig9p9ql816tohgk8l3pf11.apps.googleusercontent.com</string>
+	<key>GMSApiKey</key>
+	<string>$(GOOGLE_MAPS_API_KEY)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

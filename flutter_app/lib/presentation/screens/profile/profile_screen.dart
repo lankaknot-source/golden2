@@ -354,7 +354,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           color: AppColors.primary),
                       title: const Text('Terms & Conditions'),
                       onTap: () => _openLegal(
-                          'https://www.postkina.online/terms.html'),
+                          'https://ykingtech.github.io/GOLDEN-HAND-CAREGIVER/terms.html'),
                     ),
                     const Divider(height: 1),
                     ListTile(
@@ -363,7 +363,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           color: AppColors.primary),
                       title: const Text('Privacy Policy'),
                       onTap: () => _openLegal(
-                          'https://www.postkina.online/privacy.html'),
+                          'https://ykingtech.github.io/GOLDEN-HAND-CAREGIVER/privacy.html'),
                     ),
                     const Divider(height: 1),
                     ListTile(
@@ -372,7 +372,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           color: AppColors.primary),
                       title: const Text('Refund Policy'),
                       onTap: () => _openLegal(
-                          'https://www.postkina.online/refund.html'),
+                          'https://ykingtech.github.io/GOLDEN-HAND-CAREGIVER/refund.html'),
                     ),
                   ],
                 ),
