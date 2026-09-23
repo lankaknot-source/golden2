@@ -206,10 +206,10 @@ class _BookingCard extends ConsumerWidget {
     final fmt = DateFormat('d MMM yyyy');
     final (color, icon) = _statusStyle(booking.status);
     final isCaregiver = user.isCaregiverOrNurse;
-    final hasAcceptedThisJob = booking.jobAcceptances
-        .any((acceptance) => acceptance.caregiverId == user.uid);
-    final canEnterStartCode = isCaregiver &&
-        (booking.caregiverId == user.uid || hasAcceptedThisJob);
+    // Caregiver bookings are already scoped by the repository. Once an
+    // accepted job is in that list, always show the code entry action; the
+    // repository still verifies the exact stored code before starting.
+    final canEnterStartCode = isCaregiver;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -359,9 +359,9 @@ class _BookingCard extends ConsumerWidget {
                 // ── Start code section (accepted status) ──────────────────
                 if ((!isCaregiver && booking.status == BookingStatus.accepted) ||
                     (canEnterStartCode &&
-                        booking.status != BookingStatus.inProgress &&
-                        booking.status != BookingStatus.completed &&
-                        booking.status != BookingStatus.cancelled)) ...[
+                        (booking.status == BookingStatus.accepted ||
+                            booking.status == BookingStatus.broadcasted ||
+                            booking.status == BookingStatus.broadcastAccepted))) ...[
                   const SizedBox(height: 12),
                   const Divider(height: 1),
                   const SizedBox(height: 12),
