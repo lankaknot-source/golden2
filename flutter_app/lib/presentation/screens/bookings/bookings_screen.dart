@@ -1172,26 +1172,22 @@ class _OtpDialog extends StatefulWidget {
 }
 
 class _OtpDialogState extends State<_OtpDialog> {
-  final _controllers = List.generate(5, (_) => TextEditingController());
-  final _focusNodes = List.generate(5, (_) => FocusNode());
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
   bool _submitting = false;
 
   @override
   void dispose() {
-    for (final c in _controllers) {
-      c.dispose();
-    }
-    for (final f in _focusNodes) {
-      f.dispose();
-    }
+    _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
-  String get _code => _controllers.map((c) => c.text).join();
+  String get _code => _controller.text.trim().toUpperCase();
 
   Future<void> _submit() async {
     final code = _code;
-    if (code.length < 5) return;
+    if (code.length < 5 || _submitting) return;
     setState(() => _submitting = true);
     await widget.onSubmit(code);
     if (mounted) setState(() => _submitting = false);
@@ -1234,55 +1230,38 @@ class _OtpDialogState extends State<_OtpDialog> {
           ),
         ],
       ),
-      content: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(5, (i) {
-          return SizedBox(
-            width: 52,
-            height: 60,
-            child: TextField(
-              controller: _controllers[i],
-              focusNode: _focusNodes[i],
-              textAlign: TextAlign.center,
-              keyboardType: i == 0 ? TextInputType.text : TextInputType.number,
-              textCapitalization: i == 0
-                  ? TextCapitalization.characters
-                  : TextCapitalization.none,
-              maxLength: 1,
-              style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  fontFamily: 'Poppins',
-                  color: AppColors.primary),
-              decoration: InputDecoration(
-                counterText: '',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: AppColors.primary, width: 2),
-                ),
-                filled: true,
-                fillColor: AppColors.primary.withValues(alpha: 0.04),
-              ),
-              inputFormatters: [
-                i == 0
-                    ? FilteringTextInputFormatter.allow(RegExp('[A-Za-z]'))
-                    : FilteringTextInputFormatter.digitsOnly,
-              ],
-              onChanged: (val) {
-                if (val.isNotEmpty && i < 4) {
-                  _focusNodes[i + 1].requestFocus();
-                } else if (val.isEmpty && i > 0) {
-                  _focusNodes[i - 1].requestFocus();
-                }
-                setState(() {});
-                if (_code.length == 5) _submit();
-              },
-            ),
-          );
-        }),
+      content: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        autofocus: true,
+        textAlign: TextAlign.center,
+        keyboardType: TextInputType.text,
+        textCapitalization: TextCapitalization.characters,
+        maxLength: 5,
+        style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'Poppins',
+            color: AppColors.primary,
+            letterSpacing: 6),
+        decoration: InputDecoration(
+          hintText: 'A1234',
+          counterText: '1 letter + 4 numbers',
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          ),
+          filled: true,
+          fillColor: AppColors.primary.withValues(alpha: 0.04),
+        ),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+        ],
+        onChanged: (_) {
+          setState(() {});
+          if (_code.length == 5) _submit();
+        },
       ),
       actions: [
         TextButton(

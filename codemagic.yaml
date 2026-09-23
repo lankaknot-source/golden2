@@ -50,7 +50,7 @@ workflows:
           flutter build ios \
             --release \
             --no-codesign \
-            --build-number="${BUILD_NUMBER:-22}"
+            --build-number="${BUILD_NUMBER:-23}"
 
     artifacts:
       - build/ios/iphoneos/Runner.app
@@ -118,7 +118,7 @@ workflows:
           set -euo pipefail
           flutter build ipa \
             --release \
-            --build-number="${BUILD_NUMBER:-22}" \
+            --build-number="${BUILD_NUMBER:-23}" \
             --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
