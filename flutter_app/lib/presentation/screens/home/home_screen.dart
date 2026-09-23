@@ -2252,7 +2252,7 @@ class _ProfileTab extends ConsumerWidget {
                       _ProfileItem(Icons.settings_outlined, 'Settings',
                           () => context.push('/settings')),
                       _ProfileItem(Icons.help_outline_rounded, 'Help & Support',
-                          () => _openLegalPage('mailto:support@kinacare.lk')),
+                          () => _openLegalPage('mailto:it@goldenhandcaregivers.com')),
                       _ProfileItem(Icons.description_outlined,
                           'Terms & Conditions', () => _openLegalPage(
                               'https://ykingtech.github.io/GOLDEN-HAND-CAREGIVER/terms.html')),
