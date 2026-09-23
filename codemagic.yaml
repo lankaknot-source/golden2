@@ -133,5 +133,8 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # Upload and process the build without creating another beta review
+        # submission. App Store Connect currently has a submission limit;
+        # submit the processed build manually when the review window allows.
+        submit_to_testflight: false
         submit_to_app_store: false
