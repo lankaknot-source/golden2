@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -82,6 +84,68 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final user = ref.read(currentUserProvider);
+    if (user == null || !mounted) return;
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Account',
+            style: TextStyle(color: AppColors.error, fontFamily: 'Poppins')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This permanently deletes your account and cannot be undone.',
+              style: TextStyle(fontFamily: 'Poppins'),
+            ),
+            const SizedBox(height: 14),
+            const Text('Type DELETE to confirm:',
+                style: TextStyle(fontSize: 12, fontFamily: 'Poppins')),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(hintText: 'DELETE'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(
+                dialogContext, controller.text.trim() == 'DELETE'),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'isDeleted': true,
+        'deletedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      await FirebaseAuth.instance.currentUser?.delete();
+      await ref.read(authProvider.notifier).signOut();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Delete failed. Please sign in again and retry: $e'),
+          backgroundColor: AppColors.error,
+        ));
+      }
     }
   }
 
@@ -278,6 +342,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         : const Text('Save Changes'),
                   ),
                 ),
+
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _deleteAccount,
+                  icon: const Icon(Icons.delete_forever_rounded),
+                  label: const Text('Delete Account'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
