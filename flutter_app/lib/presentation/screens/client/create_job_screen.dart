@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
@@ -160,6 +161,25 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
     } finally {
       if (mounted) setState(() => _fetchingLocation = false);
     }
+  }
+
+  Future<void> _pickMapLocation() async {
+    final picked = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (_) => _MapLocationPicker(
+          initial: _lat != null && _lng != null
+              ? LatLng(_lat!, _lng!)
+              : null,
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _lat = picked.latitude;
+      _lng = picked.longitude;
+      _addressCtrl.text =
+          'Map pin: ${picked.latitude.toStringAsFixed(5)}, ${picked.longitude.toStringAsFixed(5)}';
+    });
   }
 
   void _addCustomTask() {
@@ -615,6 +635,15 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                     style: const TextStyle(fontFamily: 'Poppins'),
                     maxLines: 2,
                   ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _pickMapLocation,
+                      icon: const Icon(Icons.map_outlined),
+                      label: const Text('Select location on map'),
+                    ),
+                  ),
                   if (_lat != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
@@ -765,6 +794,76 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
             const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MapLocationPicker extends StatefulWidget {
+  final LatLng? initial;
+  const _MapLocationPicker({this.initial});
+
+  @override
+  State<_MapLocationPicker> createState() => _MapLocationPickerState();
+}
+
+class _MapLocationPickerState extends State<_MapLocationPicker> {
+  static const _defaultCenter = LatLng(6.9271, 79.8612);
+  LatLng? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initial;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final center = widget.initial ?? _defaultCenter;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Select Service Location'),
+        actions: [
+          TextButton(
+            onPressed: _selected == null
+                ? null
+                : () => Navigator.pop(context, _selected),
+            child: const Text('Use Location'),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: CameraPosition(target: center, zoom: 13),
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+            zoomControlsEnabled: false,
+            onTap: (point) => setState(() => _selected = point),
+            markers: {
+              if (_selected != null)
+                Marker(
+                  markerId: const MarkerId('selected_service_location'),
+                  position: _selected!,
+                ),
+            },
+          ),
+          const Positioned(
+            left: 16,
+            right: 16,
+            bottom: 20,
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Text(
+                  'Tap the map to place the service location pin, then tap Use Location.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
