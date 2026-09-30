@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -19,6 +20,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordCtrl = TextEditingController();
   bool _obscurePassword = true;
   bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
 
   @override
   void dispose() {
@@ -42,7 +44,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     final authState = ref.watch(authProvider);
-    final isLoading = authState is AuthLoading && !_isGoogleLoading;
+    final busy = authState is AuthLoading;
+    final isLoading = busy && !_isGoogleLoading && !_isAppleLoading;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -66,7 +69,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onTogglePassword: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
                   onForgotPassword: () => _showForgotPasswordSheet(context),
-                  onSubmit: isLoading ? null : _signIn,
+                  onSubmit: busy ? null : _signIn,
                   isLoading: isLoading,
                 ),
                 const SizedBox(height: 24),
@@ -74,8 +77,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 24),
                 _GoogleButton(
                   isLoading: _isGoogleLoading,
-                  onPressed: _isGoogleLoading ? null : _signInWithGoogle,
+                  onPressed: busy ? null : _signInWithGoogle,
                 ),
+                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: busy ? null : _signInWithApple,
+                      icon: const Icon(Icons.apple, size: 26),
+                      label: _isAppleLoading
+                          ? const SizedBox(width: 22, height: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2.5))
+                          : const Text('Sign in with Apple'),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 40),
                 _SignUpLink(),
                 const SizedBox(height: 24),
@@ -102,6 +125,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isGoogleLoading = true);
     await ref.read(authProvider.notifier).signInWithGoogle();
     if (mounted) setState(() => _isGoogleLoading = false);
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() => _isAppleLoading = true);
+    await ref.read(authProvider.notifier).signInWithApple();
+    if (mounted) setState(() => _isAppleLoading = false);
   }
 
   void _showForgotPasswordSheet(BuildContext context) {

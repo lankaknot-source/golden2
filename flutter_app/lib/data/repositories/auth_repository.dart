@@ -55,12 +55,26 @@ class AuthRepository {
       );
       userCredential = await _auth.signInWithCredential(credential);
     }
-    final fbUser = userCredential.user!;
+    return _saveSocialUser(userCredential.user!);
+  }
+
+  Future<UserModel> signInWithApple() async {
+    await ensureFirebaseInitialized();
+    final provider = AppleAuthProvider()
+      ..addScope('email')
+      ..addScope('name');
+    final credential = kIsWeb
+        ? await _auth.signInWithPopup(provider)
+        : await _auth.signInWithProvider(provider);
+    return _saveSocialUser(credential.user!);
+  }
+
+  Future<UserModel> _saveSocialUser(User fbUser) async {
     final uid = fbUser.uid;
 
     final doc = await _firestore.collection(AppConstants.usersCollection).doc(uid).get();
     if (!doc.exists) {
-      // New Google user — needs role selection
+      // Preserve Apple's private relay email; never require a public address.
       final newUser = UserModel(
         uid: uid,
         name: fbUser.displayName ?? '',

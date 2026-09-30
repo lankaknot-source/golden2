@@ -25,7 +25,11 @@ class BookingRepository {
   }
 
   Stream<Booking> streamBooking(String id) {
-    return _col.doc(id).snapshots().map((doc) => Booking.fromMap(doc.data()!, doc.id));
+    return _col.doc(id).snapshots().map((doc) {
+      final data = doc.data();
+      if (data == null) throw StateError('This booking is no longer available.');
+      return Booking.fromMap(data, doc.id);
+    });
   }
 
   Stream<List<Booking>> streamClientBookings(String clientId) {

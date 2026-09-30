@@ -15,6 +15,7 @@ import '../screens/common/no_internet_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/log/care_log_screen.dart';
 import '../screens/map/map_screen.dart';
+import '../screens/map/active_tracking_screen.dart';
 import '../screens/profile/caregiver_verification_screen.dart';
 import '../screens/profile/client_kyc_screen.dart';
 import '../screens/profile/leave_request_screen.dart';
@@ -68,6 +69,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/chat/:bookingId',
         builder: (ctx, state) => ChatScreen(bookingId: state.pathParameters['bookingId']!),
       ),
+      GoRoute(path: '/map/active', builder: (ctx, state) => const ActiveTrackingScreen()),
       GoRoute(
         path: '/map/:bookingId',
         builder: (ctx, state) => MapScreen(bookingId: state.pathParameters['bookingId']!),

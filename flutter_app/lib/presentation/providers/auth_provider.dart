@@ -96,6 +96,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> signInWithApple() async {
+    state = const AuthLoading();
+    try {
+      final user = await _repo.signInWithApple();
+      state = AuthAuthenticated(user);
+    } catch (e) {
+      state = AuthError(e.toString());
+    }
+  }
+
   Future<void> signUp({
     required String email,
     required String password,

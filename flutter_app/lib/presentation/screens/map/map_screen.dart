@@ -35,9 +35,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _rtdbHasData = false;
   LatLng? _caregiverLatLng;
   bool _geofenceAlerted = false;
+  String? _subscribedCaregiverId;
+  String? _locationError;
+  int _locationGeneration = 0;
 
   @override
   void dispose() {
+    _locationGeneration++;
     _locationSub?.cancel();
     _firestoreLocationSub?.cancel();
     _mapController?.dispose();
@@ -45,7 +49,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _updateCaregiverPosition(LatLng cgLatLng, LatLng jobLatLng) {
+    if (!mounted) return;
     setState(() {
+      _locationError = null;
       _caregiverLatLng = cgLatLng;
       _markers.removeWhere((m) => m.markerId.value == 'caregiver');
       _markers.add(Marker(
@@ -67,12 +73,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final dist = _distanceMetres(cgLatLng, jobLatLng);
     if (dist <= _kGeofenceRadius && !_geofenceAlerted) {
       _geofenceAlerted = true;
-      NotificationService().showGeofenceAlert('Caregiver has arrived at the care location!');
+      NotificationService().showGeofenceAlert('Caregiver has arrived at the care location!')
+          .catchError((Object _) {});
       _showGeofenceSnackbar();
     }
   }
 
   void _subscribeToLocation(String caregiverId, LatLng jobLatLng) {
+    if (!mounted) return;
+    final generation = ++_locationGeneration;
     _locationSub?.cancel();
     _firestoreLocationSub?.cancel();
     _rtdbHasData = false;
@@ -80,15 +89,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     // Primary: Firebase Realtime Database (Flutter caregiver app updates here)
     final ref = FirebaseDatabase.instance.ref('locations/$caregiverId');
     _locationSub = ref.onValue.listen((event) {
+      if (!mounted || generation != _locationGeneration) return;
       final data = event.snapshot.value;
       if (data == null) return;
       if (data is! Map) return;
       final map = Map<String, dynamic>.from(data);
-      final lat = (map['lat'] as num?)?.toDouble();
-      final lng = (map['lng'] as num?)?.toDouble();
+      final lat = _coordinate(map['lat'], 90);
+      final lng = _coordinate(map['lng'], 180);
       if (lat == null || lng == null) return;
       _rtdbHasData = true;
       _updateCaregiverPosition(LatLng(lat, lng), jobLatLng);
+    }, onError: (Object error) {
+      if (!mounted || generation != _locationGeneration) return;
+      _rtdbHasData = false;
+      _handleLocationError(error);
     });
 
     // Fallback: Firestore users collection (Kotlin app updates locationLat/locationLng here)
@@ -97,13 +111,26 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         .doc(caregiverId)
         .snapshots()
         .listen((doc) {
+      if (!mounted || generation != _locationGeneration) return;
       if (_rtdbHasData || !doc.exists) return;
       final data = doc.data()!;
-      final lat = (data['locationLat'] as num?)?.toDouble();
-      final lng = (data['locationLng'] as num?)?.toDouble();
+      final lat = _coordinate(data['locationLat'], 90);
+      final lng = _coordinate(data['locationLng'], 180);
       if (lat == null || lng == null || (lat == 0 && lng == 0)) return;
       _updateCaregiverPosition(LatLng(lat, lng), jobLatLng);
+    }, onError: (Object error) {
+      if (generation == _locationGeneration) _handleLocationError(error);
     });
+  }
+
+  double? _coordinate(Object? raw, double limit) {
+    final value = raw is num ? raw.toDouble() : double.tryParse('$raw');
+    return value != null && value.isFinite && value.abs() <= limit ? value : null;
+  }
+
+  void _handleLocationError(Object error) {
+    if (!mounted || _caregiverLatLng != null) return;
+    setState(() => _locationError = 'Live location is unavailable. Please try again.');
   }
 
   void _showGeofenceSnackbar() {
@@ -164,7 +191,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         data: (booking) {
           final jobLat = booking.locationLat;
           final jobLng = booking.locationLng;
-          final hasLocation = jobLat != 0 || jobLng != 0;
+          final hasLocation = _coordinate(jobLat, 90) != null &&
+              _coordinate(jobLng, 180) != null && (jobLat != 0 || jobLng != 0);
 
           if (!hasLocation) {
             return const Center(
@@ -197,7 +225,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           }
 
           // Subscribe to caregiver RTDB location
-          if (booking.caregiverId != null && _locationSub == null) {
+          if (booking.caregiverId != null && booking.caregiverId!.isNotEmpty &&
+              _subscribedCaregiverId != booking.caregiverId) {
+            _subscribedCaregiverId = booking.caregiverId;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _subscribeToLocation(booking.caregiverId!, jobLatLng);
             });
@@ -219,6 +249,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 zoomControlsEnabled: false,
                 mapToolbarEnabled: false,
               ),
+              if (_locationError != null)
+                Positioned(top: 70, left: 16, right: 16,
+                  child: Card(child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text(_locationError!),
+                      TextButton(onPressed: () {
+                        setState(() => _locationError = null);
+                        _subscribeToLocation(booking.caregiverId!, jobLatLng);
+                      }, child: const Text('Retry')),
+                    ]),
+                  )),
+                ),
 
               // Distance info banner
               if (_caregiverLatLng != null)
@@ -309,7 +352,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(e is StateError ? 'This booking is no longer available.'
+                : 'Unable to load this session. Please try again.'),
+            TextButton(onPressed: () => ref.invalidate(bookingDetailProvider(widget.bookingId)),
+              child: const Text('Retry')),
+          ],
+        )),
       ),
     );
   }
