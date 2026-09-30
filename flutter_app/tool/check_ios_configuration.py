@@ -16,6 +16,14 @@ def check_project(app):
     with (ios / "Flutter/AppFrameworkInfo.plist").open("rb") as handle:
         framework = plistlib.load(handle)
     project = (ios / "Runner.xcodeproj/project.pbxproj").read_text()
+    with (ios / "Runner/Runner.entitlements").open("rb") as handle:
+        entitlements = plistlib.load(handle)
+    if entitlements.get("com.apple.developer.applesignin") != ["Default"]:
+        raise ValueError("Runner must include Sign in with Apple entitlement")
+    if project.count("CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;") != 3:
+        raise ValueError("All three Runner configurations must use Runner.entitlements")
+    if "AppleMapView.swift in Sources" not in project:
+        raise ValueError("MapKit platform view must be compiled into Runner")
     bundle_ids = re.findall(r"PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);", project)
     app_ids = {value.strip('"') for value in bundle_ids if not value.endswith(".RunnerTests")}
     if app_ids != {firebase["BUNDLE_ID"]}:

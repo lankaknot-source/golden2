@@ -1,38 +1,43 @@
-# Build 37 review follow-up
+# Release 1.3.10 (39): Apple login and iOS maps
 
-## Sign in with Apple
+## Findings from the supplied 1.3.9 (38) IPA
 
-The iOS login screen now offers Apple alongside Google, using Firebase's native
-Apple provider. New accounts retain the email returned by Apple, including Hide
-My Email relay addresses. Existing profiles are preserved.
+- Both the embedded App Store profile and the executable lacked
+  `com.apple.developer.applesignin`. This prevents native Apple authorization.
+- The source entitlements XML was missing its closing plist tag; this is fixed.
+- The map used the Firebase API key. No evidence in an IPA can confirm Google
+  Maps SDK enablement, key restrictions or billing. Markers on gray tiles are
+  consistent with a basemap loading/configuration failure.
 
-Before producing the signed release:
+## Changes
 
-1. Enable Sign in with Apple for `com.kina.goldenHandCare` in Apple Developer.
-2. Enable the Apple provider in Firebase Authentication and complete its required
-   configuration. Configure Apple's private email relay for Firebase email
-   senders if sending authentication emails to relay addresses.
-3. Regenerate the distribution provisioning profile with Sign in with Apple,
-   then make sure Codemagic uses that profile. Runner now includes the entitlement
-   in Debug, Profile and Release configurations.
-4. On a physical iPhone/iPad, test first-time sign-in with Hide My Email, sign-out,
-   returning sign-in and cancellation. Confirm an existing account is preserved.
+- iOS live tracking and service-location selection now use native Apple MapKit.
+  They no longer use a Google Maps API key. Android keeps its Google Maps renderer.
+  Caregiver updates, destination pins, connecting lines and recenter remain.
+- Codemagic selects only an unexpired App Store profile for the correct bundle
+  with Sign in with Apple, then restores the source entitlements setting.
+- Before upload, the exported IPA is checked for Apple login permission in BOTH
+  its profile and signed executable, with matching application and team IDs.
+  This is an entitlement check, not cryptographic signature verification.
+- Apple login failures retain a non-sensitive Firebase error code for diagnosis.
 
-## Live Tracking
+## Required account setup before building
 
-The home shortcut previously read `bookings/active`, which is not a real booking
-ID, then force-unwrapped the missing document. It now opens a session selector,
-shows an empty state when no session is assigned, and navigates using a real ID.
-Missing booking documents and live-location stream errors have recoverable UI.
+1. Apple Developer: enable Sign in with Apple for `com.kina.goldenHandCare`.
+2. Regenerate its App Store provisioning profile and upload/refetch it in
+   Codemagic. The profile bundled in build 38 is not suitable. The next signed
+   build intentionally stops with an explanation if no suitable profile exists.
+3. Keep Apple enabled in Firebase Authentication. Configure private email relay
+   senders if authentication emails are sent to Hide My Email accounts.
+4. Build the latest commit with the iOS App Store workflow. The source version is
+   1.3.10+39; Codemagic may assign a higher build number.
 
-Before resubmission, test a fresh install on iPad: no bookings, accepted booking,
-active booking with a caregiver publishing location, network interruption and
-retry, and leaving the map while updates arrive. Confirm the release Google Maps
-key has Maps SDK for iOS enabled and permits `com.kina.goldenHandCare`.
+## Device verification still required
 
-Use a build number higher than the latest uploaded build (reviewed build was 37).
-Provide the reviewer a working test account and the steps to an active session.
+Windows cannot compile or run MapKit/Xcode. Run the native build on Codemagic and
+install through TestFlight. Check first/returning Apple login, Hide My Email,
+login cancellation, map tiles and pins on iPhone/iPad, tap-to-select a service
+location, live movement, recenter, and network failure/retry. Do not re-sign the
+IPA with a different profile. Validate regional map availability on the device.
+
 The screenshot and App Privacy rejection issues remain separate required fixes.
-
-Native signing, Apple/Firebase console settings and physical iPad behavior cannot
-be verified from the Windows development environment.

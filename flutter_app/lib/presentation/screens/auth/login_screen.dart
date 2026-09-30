@@ -35,7 +35,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next is AuthError) {
-        _showError(_friendlyMessage(next.message));
+        _showError(_isAppleLoading ? next.message : _friendlyMessage(next.message));
         setState(() => _isGoogleLoading = false);
       }
       if (next is AuthAuthenticated) {

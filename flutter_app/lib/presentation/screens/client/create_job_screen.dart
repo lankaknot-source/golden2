@@ -12,6 +12,7 @@ import '../../../domain/models/booking_model.dart';
 import '../../../domain/models/elder_profile_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
+import '../../widgets/care_map.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 
@@ -863,13 +864,8 @@ class _MapLocationPickerState extends State<_MapLocationPicker> {
       ),
       body: Stack(
         children: [
-          GoogleMap(
+          CareMap(
             initialCameraPosition: CameraPosition(target: center, zoom: 13),
-            // The client can place a pin without granting location permission;
-            // current-location selection is handled by the separate button.
-            myLocationEnabled: false,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
             onTap: (point) => setState(() => _selected = point),
             markers: {
               if (_selected != null)

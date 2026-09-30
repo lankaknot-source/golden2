@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../data/repositories/auth_repository.dart';
 import '../../data/services/notification_service.dart';
@@ -101,8 +103,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final user = await _repo.signInWithApple();
       state = AuthAuthenticated(user);
+    } on FirebaseAuthException catch (e) {
+      // Log only the code, never Apple's credential/token or private relay email.
+      debugPrint('Apple sign-in failed: ${e.code}');
+      if (e.code == 'canceled' || e.code == 'web-context-cancelled' ||
+          e.code == 'popup-closed-by-user') {
+        state = const AuthUnauthenticated();
+      } else {
+        state = AuthError('Apple sign-in could not complete (${e.code}). Please try again.');
+      }
     } catch (e) {
-      state = AuthError(e.toString());
+      state = const AuthError('Apple sign-in could not complete. Please try again.');
     }
   }
 

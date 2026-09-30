@@ -50,7 +50,7 @@ workflows:
           flutter build ios \
             --release \
             --no-codesign \
-            --build-number="${BUILD_NUMBER:-38}"
+            --build-number="${BUILD_NUMBER:-39}"
 
     artifacts:
       - build/ios/iphoneos/Runner.app
@@ -111,15 +111,20 @@ workflows:
       - name: Configure automatic code signing
         script: |
           set -euo pipefail
-          xcode-project use-profiles
+          python3 tool/verify_ios_signing.py --configure
 
       - name: Build signed IPA
         script: |
           set -euo pipefail
           flutter build ipa \
             --release \
-            --build-number="${BUILD_NUMBER:-38}" \
+            --build-number="${BUILD_NUMBER:-39}" \
             --export-options-plist=/Users/builder/export_options.plist
+
+      - name: Verify Apple login in exported IPA
+        script: |
+          set -euo pipefail
+          python3 tool/verify_ios_signing.py build/ios/ipa/*.ipa
 
     artifacts:
       - build/ios/ipa/*.ipa

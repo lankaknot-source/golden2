@@ -13,6 +13,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/services/notification_service.dart';
 import '../../providers/booking_provider.dart';
+import '../../widgets/care_map.dart';
 
 // Geofence radius in metres
 const _kGeofenceRadius = 50.0;
@@ -26,7 +27,7 @@ class MapScreen extends ConsumerStatefulWidget {
 }
 
 class _MapScreenState extends ConsumerState<MapScreen> {
-  GoogleMapController? _mapController;
+  CareMapController? _mapController;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
 
@@ -44,7 +45,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _locationGeneration++;
     _locationSub?.cancel();
     _firestoreLocationSub?.cancel();
-    _mapController?.dispose();
     super.dispose();
   }
 
@@ -235,19 +235,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
           return Stack(
             children: [
-              GoogleMap(
+              CareMap(
                 onMapCreated: (ctrl) => _mapController = ctrl,
                 initialCameraPosition: CameraPosition(target: jobLatLng, zoom: 15),
                 markers: _markers,
                 polylines: _polylines,
-                // This screen tracks the caregiver, so it must not request
-                // the viewer's location just to render the map. Enabling the
-                // blue-dot without a granted permission can crash the iOS
-                // Google Maps platform view.
-                myLocationEnabled: false,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: false,
               ),
               if (_locationError != null)
                 Positioned(top: 70, left: 16, right: 16,
@@ -300,9 +292,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 child: FloatingActionButton.small(
                   onPressed: () {
                     final target = _caregiverLatLng ?? jobLatLng;
-                    _mapController?.animateCamera(
-                      CameraUpdate.newCameraPosition(CameraPosition(target: target, zoom: 15)),
-                    );
+                    _mapController?.moveTo(target);
                   },
                   backgroundColor: Colors.white,
                   child: const Icon(Icons.my_location_rounded, color: AppColors.primary),
